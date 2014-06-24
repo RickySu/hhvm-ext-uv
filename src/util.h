@@ -15,8 +15,7 @@
     __var__get.asCResRef().getTyped<resource_class>(); \
     })
  #define SET_RESOURCE(obj, resource, ctx) \
-    obj->o_set(s_internal_resource, resource, ctx); \
-    resource.getTyped<InternalResource>()->setObject(obj);
+    obj->o_set(s_internal_resource, resource, ctx);
 
 #endif	/* UTIL_H */
 

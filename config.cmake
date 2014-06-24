@@ -7,9 +7,10 @@ include_directories(${LIBUV_INCLUDE_DIR})
 set(LIBUV_LIBRARIES "${LIBUV_LIB}/libuv.a")
 
 HHVM_EXTENSION(uv
-    src/resource/InternalResource.cpp
-    src/resource/UVLoopResource.cpp
+    src/resource/InternalResourceData.cpp
+    src/resource/CallbackResourceData.cpp
     src/ext.cpp
+    src/uv_util.cpp
     src/uv_loop.cpp
     src/uv_signal.cpp
 )

@@ -3,7 +3,7 @@
 namespace HPHP
 {
     const StaticString
-        s_internal_resource("__internal_resource"),
+        s_internal_resource("_rc"),
         s_uvloop("UVLoop"),
         s_uvsignal("UVSignal")
     ;
