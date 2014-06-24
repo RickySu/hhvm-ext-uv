@@ -8,6 +8,10 @@ namespace HPHP {
         ObjectData *tcp_object_data;
         TcpResourceData *tcp_resource_data;
     } uv_tcp_ext_t;
+    
+    typedef struct write_req_s: public uv_write_t {
+        uv_buf_t buf;
+    } write_req_t;
 
     ALWAYS_INLINE uv_tcp_ext_t *initUVTcpObject(const Object &object, uv_loop_t *loop) {
         Resource resource(NEWOBJ(TcpResourceData(sizeof(uv_tcp_ext_t))));
@@ -21,6 +25,16 @@ namespace HPHP {
         return tcp_handle;
     }    
 
+    static void onwrite(uv_write_t *wr, int status) {
+        echo("write ok\n");
+        write_req_t *req = (write_req_t *) wr;
+        TcpResourceData *tcp_resource_data = ((uv_tcp_ext_t *) req->handle)->tcp_resource_data;
+        Object callback = tcp_resource_data->getWriteCallback();
+        vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+        delete req->buf.base;        
+        delete req;
+    }
+    
     static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
         buf->base = new char[suggested_size];
         buf->len = suggested_size;
@@ -28,6 +42,13 @@ namespace HPHP {
 
     static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
         echo("native read\n");
+        TcpResourceData *tcp_resource_data = ((uv_tcp_ext_t *) stream)->tcp_resource_data;        
+        if(nread > 0){
+            vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
+        }
+        else{
+            vm_call_user_func(tcp_resource_data->getErrorCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, nread));
+        }
         delete buf->base;
     }
     
@@ -102,11 +123,22 @@ namespace HPHP {
         uv_close((uv_handle_t *) tcp_handle, close_cb);
     }
     
-    static void HHVM_METHOD(UVTcp, setCallback, const Object &onReadCallback, const Object &onWriteCallback) {
+    static void HHVM_METHOD(UVTcp, setCallback, const Object &onReadCallback, const Object &onWriteCallback, const Object &onErrorCallback) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         resource_data->setReadCallback(onReadCallback);
         resource_data->setWriteCallback(onWriteCallback);
+        resource_data->setErrorCallback(onErrorCallback);        
+    }
+    
+    static bool HHVM_METHOD(UVTcp, write, const String &data) {
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        write_req_t *req;
+        req = new write_req_t();
+        req->buf.base = new char[data.size()];
+        req->buf.len = data.size();
+        memcpy((void *) req->buf.base, data.c_str(), data.size());        
+        return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, onwrite) == 0;
     }
     
     void uvExtension::_initUVTcpClass() {
@@ -116,5 +148,6 @@ namespace HPHP {
         HHVM_ME(UVTcp, accept);
         HHVM_ME(UVTcp, close);
         HHVM_ME(UVTcp, setCallback);
+        HHVM_ME(UVTcp, write);
     }
 }
