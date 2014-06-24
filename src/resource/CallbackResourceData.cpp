@@ -1,5 +1,5 @@
 /*
- * File:   EventBufferEventResourceData.cpp
+ * File:   CallbackResourceData.h
  * Author: ricky
  *
  * Created on 2014年5月19日, 上午 9:48
@@ -9,28 +9,12 @@
 
 namespace HPHP {
     IMPLEMENT_OBJECT_ALLOCATION(CallbackResourceData)
-
+    IMPLEMENT_CALLBACK_OBJECT(CallbackResourceData, Callback, callback_object)
     CallbackResourceData::CallbackResourceData(unsigned size):InternalResourceData(size) {
-        callback_object_data = NULL;
-    }
-
-    void CallbackResourceData::setCallback(const Object &callback_object)
-    {
-        callback_object_data = callback_object.get();
-        callback_object_data->incRefCount();
-    }
-
-    Object CallbackResourceData::getCallback()
-    {
-        return Object(callback_object_data);
     }
 
     CallbackResourceData::~CallbackResourceData() {
-        if(callback_object_data != NULL){
-            echo("release CallbackData\n");
-            callback_object_data->decRefCount();
-            callback_object_data = NULL;
-        }
+        GC_OBJECT_DATA(callback_object);
     }
 
 }

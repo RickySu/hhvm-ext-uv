@@ -9,10 +9,12 @@ set(LIBUV_LIBRARIES "${LIBUV_LIB}/libuv.a")
 HHVM_EXTENSION(uv
     src/resource/InternalResourceData.cpp
     src/resource/CallbackResourceData.cpp
+    src/resource/TcpResourceData.cpp
     src/ext.cpp
     src/uv_util.cpp
     src/uv_loop.cpp
     src/uv_signal.cpp
+    src/uv_tcp.cpp
 )
 HHVM_SYSTEMLIB(uv ext_uv.php)
 

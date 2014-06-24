@@ -11,6 +11,31 @@
 #include "hphp/runtime/base/base-includes.h"
 #include <uv.h>
 
+#define GC_OBJECT_DATA(callback_object) \
+    if(callback_object##_data != NULL){ \
+        echo("release CallbackData\n"); \
+        callback_object##_data->decRefCount(); \
+        callback_object##_data = NULL; \
+    }
+    
+#define DECLARE_CALLBACK_OBJECT_DATA(object) \
+    private: ObjectData *object##_data = NULL;
+
+#define DECLARE_CALLBACK_OBJECT(method, object) \
+    public: void set##method(const Object &object); \
+    public: Object get##method(); \
+    DECLARE_CALLBACK_OBJECT_DATA(object)
+
+#define IMPLEMENT_CALLBACK_OBJECT(classname, method, object) \
+    void classname::set##method(const Object &object) {\
+        if(!object.isNull()){\
+            object##_data = object.get();\
+            object##_data->incRefCount();\
+        } \
+    } \
+    Object classname::get##method() {\
+        return Object(object##_data);\
+    }
 namespace HPHP {
 
     class InternalResourceData : public  SweepableResourceData{
@@ -20,8 +45,8 @@ namespace HPHP {
         CLASSNAME_IS("InternalResourceData")
         InternalResourceData(unsigned size);
         virtual ~InternalResourceData();
-        void *getInternalResourceData();
-    private:
+        void *getInternalResourceData();        
+    private:        
         void *resource;
     };
 }

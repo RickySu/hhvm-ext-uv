@@ -3,12 +3,12 @@
 
 namespace HPHP {
 
-    typedef struct uv_siginal_ext_s:public uv_signal_t{
+    typedef struct uv_signal_ext_s:public uv_signal_t{
         bool start = false;
         CallbackResourceData *callback_resource_data;
     } uv_signal_ext_t;
     
-    void signal_handle_callback(uv_signal_ext_t *signal_handle, int signo) {    
+    static void signal_handle_callback(uv_signal_ext_t *signal_handle, int signo) {    
         vm_call_user_func(signal_handle->callback_resource_data->getCallback(), make_packed_array(signo));
     }
     

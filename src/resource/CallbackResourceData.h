@@ -13,15 +13,13 @@
 namespace HPHP {
 
     class CallbackResourceData : public InternalResourceData {
+        DECLARE_CALLBACK_OBJECT(Callback, callback_object)        
     public:
         DECLARE_RESOURCE_ALLOCATION(CallbackResourceData)
         CLASSNAME_IS("CallbackResourceData")
+        
         CallbackResourceData(unsigned size);
         virtual ~CallbackResourceData();
-        void setCallback(const Object &callback_object);
-        Object getCallback();
-    private:
-        ObjectData *callback_object_data;
     };
 }
 
