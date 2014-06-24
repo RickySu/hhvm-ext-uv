@@ -2,6 +2,7 @@
 #define EXT_H_
 #include "../config.h"
 #include "hphp/runtime/base/base-includes.h"
+#include "hphp/runtime/base/socket.h"
 #include "hphp/runtime/vm/jit/translator-inline.h"
 #include "resource/InternalResourceData.h"
 #include "resource/CallbackResourceData.h"

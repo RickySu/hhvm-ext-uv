@@ -17,5 +17,43 @@
  #define SET_RESOURCE(obj, resource, ctx) \
     obj->o_set(s_internal_resource, resource, ctx);
 
-#endif	/* UTIL_H */
+namespace HPHP
+{
 
+    ALWAYS_INLINE Object makeObject(const String &ClassName, const Array arg, bool init){
+        Class* cls = Unit::lookupClass(ClassName.get());
+        Object ret = ObjectData::newInstance(cls);
+        if(init){
+            TypedValue dummy;
+            g_context->invokeFunc(&dummy, cls->getCtor(), arg, ret.get());
+        }
+        return ret;
+    }
+
+    ALWAYS_INLINE Object makeObject(const String &ClassName, bool init = true){
+        return makeObject(ClassName, Array::Create(), init);
+    }
+
+    ALWAYS_INLINE Object makeObject(const char *ClassName, const Array arg){
+        return makeObject(String(ClassName), arg, true);
+    }
+
+    ALWAYS_INLINE Object makeObject(const char *ClassName, bool init = true){
+        return makeObject(String(ClassName), Array::Create(), init);
+    }
+
+    ALWAYS_INLINE int resource_to_fd(const Resource &fd){
+        File *file = fd.getTyped<File>();
+        if(file->valid()){
+            return file->fd();
+        }
+        Socket *sock = fd.getTyped<Socket>();
+        if(sock->valid()){
+            return sock->fd();
+        }
+        return -1;
+    }
+
+}
+
+#endif	/* UTIL_H */

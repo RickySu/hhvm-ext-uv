@@ -14,7 +14,7 @@
 #define GC_OBJECT_DATA(callback_object) \
     if(callback_object##_data != NULL){ \
         echo("release CallbackData\n"); \
-        callback_object##_data->decRefCount(); \
+        callback_object##_data->decRefAndRelease(); \
         callback_object##_data = NULL; \
     }
     
