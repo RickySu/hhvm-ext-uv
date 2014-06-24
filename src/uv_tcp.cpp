@@ -6,7 +6,6 @@ namespace HPHP {
     typedef struct uv_tcp_ext_s:public uv_tcp_t{
         bool start;
         ObjectData *tcp_object_data;
-        TcpResourceData *tcp_resource_data;
     } uv_tcp_ext_t;
     
     typedef struct write_req_s: public uv_write_t {
@@ -19,19 +18,17 @@ namespace HPHP {
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(object, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
         tcp_handle->start = false;
-        tcp_handle->tcp_resource_data = tcp_resource_data;
         tcp_handle->tcp_object_data = object.get();
         uv_tcp_init(loop, tcp_handle);
         return tcp_handle;
     }    
 
     static void onwrite(uv_write_t *wr, int status) {
-        echo("write ok\n");
         write_req_t *req = (write_req_t *) wr;
-        TcpResourceData *tcp_resource_data = ((uv_tcp_ext_t *) req->handle)->tcp_resource_data;
+        TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
         Object callback = tcp_resource_data->getWriteCallback();
         vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
-        delete req->buf.base;        
+        delete req->buf.base;
         delete req;
     }
     
@@ -41,8 +38,7 @@ namespace HPHP {
     }
 
     static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-        echo("native read\n");
-        TcpResourceData *tcp_resource_data = ((uv_tcp_ext_t *) stream)->tcp_resource_data;        
+        TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) stream)->tcp_object_data, TcpResourceData, s_uvtcp);
         if(nread > 0){
             vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
         }
@@ -54,18 +50,17 @@ namespace HPHP {
     
     static void close_cb(uv_handle_t* handle) {
        ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
-       echo("closed\n");
     }
     
     static void connection_cb(uv_stream_t* server, int status) {
-        TcpResourceData *tcp_resource_data = ((uv_tcp_ext_t *) server)->tcp_resource_data;
+        TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) server)->tcp_object_data, TcpResourceData, s_uvtcp);
         Object callback = tcp_resource_data->getConnectCallback();
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) server)->tcp_object_data, status));
         }
     }
             
-    static void HHVM_METHOD(UVTcp, __construct, const Object *o_loop) {
+    static void HHVM_METHOD(UVTcp, __construct, const Object &o_loop) {
         InternalResourceData *loop_resource_data = FETCH_RESOURCE(o_loop, InternalResourceData, s_uvloop);
         initUVTcpObject(this_, (uv_loop_t *) loop_resource_data->getInternalResourceData());
     }
@@ -79,7 +74,7 @@ namespace HPHP {
         }
     }
     
-    static bool HHVM_METHOD(UVTcp, listen, const String host, int64_t port, const Object &onConnectCallback) {
+    static bool HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Object &onConnectCallback) {
         struct sockaddr_in addr;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
