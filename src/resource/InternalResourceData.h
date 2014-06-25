@@ -13,8 +13,7 @@
 
 #define GC_OBJECT_DATA(callback_object) \
     if(callback_object##_data != NULL){ \
-        echo("release CallbackData\n"); \
-        callback_object##_data->decRefAndRelease(); \
+        decRefObj(callback_object##_data); \
         callback_object##_data = NULL; \
     }
     
@@ -30,7 +29,7 @@
     void classname::set##method(const Object &object) {\
         if(!object.isNull()){\
             object##_data = object.get();\
-            object##_data->incRefCount();\
+            object##_data->incRefCount(); \
         } \
     } \
     Object classname::get##method() {\

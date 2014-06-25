@@ -1,10 +1,12 @@
 #include "ext.h"
 #include "hphp/runtime/base/thread-init-fini.h"
+#define UV_TCP_HANDLE_START 1
+#define UV_TCP_READ_START (1<<1)
 
 namespace HPHP {
 
     typedef struct uv_tcp_ext_s:public uv_tcp_t{
-        bool start;
+        uint flag;
         ObjectData *tcp_object_data;
     } uv_tcp_ext_t;
     
@@ -17,17 +19,19 @@ namespace HPHP {
         SET_RESOURCE(object, resource, s_uvtcp);
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(object, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
-        tcp_handle->start = false;
+        tcp_handle->flag = 0;
         tcp_handle->tcp_object_data = object.get();
         uv_tcp_init(loop, tcp_handle);
         return tcp_handle;
     }    
 
-    static void onwrite(uv_write_t *wr, int status) {
+    static void write_cb(uv_write_t *wr, int status) {
         write_req_t *req = (write_req_t *) wr;
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
         Object callback = tcp_resource_data->getWriteCallback();
-        vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+        if(!callback.isNull()){
+            vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+        }
         delete req->buf.base;
         delete req;
     }
@@ -40,10 +44,14 @@ namespace HPHP {
     static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) stream)->tcp_object_data, TcpResourceData, s_uvtcp);
         if(nread > 0){
-            vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
+            if(!tcp_resource_data->getReadCallback().isNull()){
+                vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
+            }
         }
         else{
-            vm_call_user_func(tcp_resource_data->getErrorCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, nread));
+            if(!tcp_resource_data->getErrorCallback().isNull()){
+                vm_call_user_func(tcp_resource_data->getErrorCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, nread));
+            }
         }
         delete buf->base;
     }
@@ -69,7 +77,11 @@ namespace HPHP {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         echo("UVTCP gc...\n");
-        if(tcp_handle->start){
+        
+        if(tcp_handle->flag & UV_TCP_READ_START){
+            uv_read_stop((uv_stream_t *) tcp_handle);
+        }        
+        if(tcp_handle->flag & UV_TCP_HANDLE_START){
             uv_unref((uv_handle_t *) tcp_handle);
         }
     }
@@ -93,7 +105,7 @@ namespace HPHP {
         
         resource_data->setConnectCallback(onConnectCallback);
         
-        tcp_handle->start = true;
+        tcp_handle->flag |= UV_TCP_HANDLE_START;
         return true;
     }
     
@@ -107,7 +119,7 @@ namespace HPHP {
             return NULL;
         }
         client.get()->incRefCount();
-        client_tcp_handle->start = true;
+        client_tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         uv_read_start((uv_stream_t *) client_tcp_handle, alloc_cb, read_cb);
         return client;
     }
@@ -133,7 +145,7 @@ namespace HPHP {
         req->buf.base = new char[data.size()];
         req->buf.len = data.size();
         memcpy((void *) req->buf.base, data.c_str(), data.size());        
-        return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, onwrite) == 0;
+        return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb) == 0;
     }
     
     void uvExtension::_initUVTcpClass() {
