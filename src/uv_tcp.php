@@ -9,4 +9,8 @@ class UVTcp
     <<__Native>> function close(): void;
     <<__Native>> function setCallback(callable $onRead, callable $onWrite, callable $onError): void;
     <<__Native>> function write(string $buf): bool;
+    <<__Native>> function getSockname(): string;
+    <<__Native>> function getPeername(): string;
+    <<__Native>> function getSockport(): int;
+    <<__Native>> function getPeerport(): int;    
 }

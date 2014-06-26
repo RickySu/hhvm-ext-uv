@@ -30,7 +30,7 @@ if($pid){
 $loop = new UVLoop();
 $server = new UVTcp($loop);
 $server->clientCloseTriggered = false;
-$server->listen($host, $port, function($server) {
+True($server->listen($host, $port, function($server) {
     $client = $server->accept();
     $client->setCallback(function($client, $recv) use($server){
         $client->write($recv);    
@@ -48,6 +48,6 @@ $server->listen($host, $port, function($server) {
         $client->write("client closed");
         $server->clientCloseTriggered = false;
     }    
-});
+}), "Server listen");
 $loop->run();
 $server = null; //FIXME: prevent strange hhvm Assertion `!MemoryManager::sweeping()' failed.

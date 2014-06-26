@@ -9,6 +9,10 @@ namespace HPHP {
     typedef struct uv_tcp_ext_s:public uv_tcp_t{
         uint flag;
         ObjectData *tcp_object_data;
+        StringData *sockAddr;
+        StringData *peerAddr;
+        int sockPort;
+        int peerPort;
     } uv_tcp_ext_t;
     
     typedef struct write_req_s: public uv_write_t {
@@ -30,6 +34,18 @@ namespace HPHP {
             handle->flag &= ~UV_TCP_HANDLE_INTERNAL_REF;
             ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
         }
+        
+        if(handle->sockPort != -1){
+            handle->sockPort = -1;
+            handle->sockAddr->decRefAndRelease();
+            handle->sockAddr = NULL;
+        }
+        
+        if(handle->peerPort != -1){
+            handle->peerPort = -1;
+            handle->peerAddr->decRefAndRelease();
+            handle->peerAddr = NULL;
+        }        
     }
     
     ALWAYS_INLINE uv_tcp_ext_t *initUVTcpObject(const Object &object, uv_loop_t *loop) {
@@ -38,6 +54,8 @@ namespace HPHP {
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(object, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
         tcp_handle->flag = 0;
+        tcp_handle->sockAddr = tcp_handle->peerAddr = NULL;
+        tcp_handle->sockPort = tcp_handle->peerPort = -1;                                
         tcp_handle->tcp_object_data = object.get();
         uv_tcp_init(loop, tcp_handle);
         return tcp_handle;
@@ -159,6 +177,95 @@ namespace HPHP {
         return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb) == 0;
     }
     
+    ALWAYS_INLINE StringData *sock_addr(struct sockaddr *addr) {
+        struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
+        char ip[20];
+        uv_ip4_name(&addr_in, ip, sizeof ip);
+        return StringData::Make(ip, CopyString);
+    }
+    
+    ALWAYS_INLINE int sock_port(struct sockaddr *addr) {
+        struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
+        return ntohs(addr_in.sin_port);
+    }    
+    
+    static String HHVM_METHOD(UVTcp, getSockname) {
+        struct sockaddr addr;
+        int addrlen;
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        
+        if(tcp_handle->sockPort == -1){
+            addrlen = sizeof addr;
+            if(uv_tcp_getsockname((const uv_tcp_t *)tcp_handle, &addr, &addrlen)){
+                return String();
+            }
+            tcp_handle->sockAddr = sock_addr(&addr);
+            tcp_handle->sockPort = sock_port(&addr);
+            tcp_handle->sockAddr->incRefCount();
+        }
+        
+        return tcp_handle->sockAddr;
+    }
+
+    static String HHVM_METHOD(UVTcp, getPeername) {
+        struct sockaddr addr;
+        int addrlen;
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        
+        if(tcp_handle->peerPort == -1){
+            addrlen = sizeof addr;
+            if(uv_tcp_getpeername((const uv_tcp_t *)tcp_handle, &addr, &addrlen)){
+                return String();
+            }
+            
+            tcp_handle->peerAddr = sock_addr(&addr);
+            tcp_handle->peerPort = sock_port(&addr);
+            tcp_handle->peerAddr->incRefCount();
+        }
+        
+        return tcp_handle->peerAddr;
+    }
+    
+    static int64_t HHVM_METHOD(UVTcp, getSockport) {
+        struct sockaddr addr;
+        int addrlen;
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+
+        if(tcp_handle->sockPort == -1){
+            addrlen = sizeof addr;
+            if(uv_tcp_getpeername((const uv_tcp_t *)tcp_handle, &addr, &addrlen)){
+                return -1;
+            }
+            tcp_handle->sockAddr = sock_addr(&addr);
+            tcp_handle->sockPort = sock_port(&addr);
+            tcp_handle->sockAddr->incRefCount();
+        }
+        
+        return tcp_handle->sockPort;
+    }    
+    
+    static int64_t HHVM_METHOD(UVTcp, getPeerport) {
+        struct sockaddr addr;
+        int addrlen;
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+
+        if(tcp_handle->peerPort == -1){
+            addrlen = sizeof addr;
+            if(uv_tcp_getpeername((const uv_tcp_t *)tcp_handle, &addr, &addrlen)){
+                return -1;
+            }
+            tcp_handle->peerAddr = sock_addr(&addr);
+            tcp_handle->peerPort = sock_port(&addr);
+            tcp_handle->peerAddr->incRefCount();
+        }
+        
+        return tcp_handle->peerPort;
+    }
+    
     void uvExtension::_initUVTcpClass() {
         HHVM_ME(UVTcp, __construct);
         HHVM_ME(UVTcp, __destruct);        
@@ -167,5 +274,9 @@ namespace HPHP {
         HHVM_ME(UVTcp, close);
         HHVM_ME(UVTcp, setCallback);
         HHVM_ME(UVTcp, write);
+        HHVM_ME(UVTcp, getSockname);
+        HHVM_ME(UVTcp, getPeername);
+        HHVM_ME(UVTcp, getSockport);
+        HHVM_ME(UVTcp, getPeerport);        
     }
 }
