@@ -40,6 +40,7 @@ namespace HPHP {
         uv_signal_ext_t *signal_handle = (uv_signal_ext_t *) resource_data->getInternalResourceData();
         int64_t ret = 0;
         if(signal_handle->start){
+            ret = uv_signal_stop((uv_signal_t *) signal_handle);
             this_.get()->decRefAndRelease();
             signal_handle->start = false;            
         }

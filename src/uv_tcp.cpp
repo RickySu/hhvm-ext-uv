@@ -1,7 +1,8 @@
 #include "ext.h"
 #include "hphp/runtime/base/thread-init-fini.h"
-#define UV_TCP_HANDLE_START 1
-#define UV_TCP_READ_START (1<<1)
+#define UV_TCP_HANDLE_INTERNAL_REF 1
+#define UV_TCP_HANDLE_START (1<<1)
+#define UV_TCP_READ_START (1<<2)
 
 namespace HPHP {
 
@@ -14,6 +15,23 @@ namespace HPHP {
         uv_buf_t buf;
     } write_req_t;
 
+    ALWAYS_INLINE void releaseHandle(uv_tcp_ext_t *handle) {
+        if(handle->flag & UV_TCP_READ_START){
+            handle->flag &= ~UV_TCP_READ_START;        
+            uv_read_stop((uv_stream_t *) handle);
+        }
+        
+        if(handle->flag & UV_TCP_HANDLE_START){
+            handle->flag &= ~UV_TCP_HANDLE_START;        
+            uv_unref((uv_handle_t *) handle);
+        }    
+        
+        if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
+            handle->flag &= ~UV_TCP_HANDLE_INTERNAL_REF;
+            ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
+        }
+    }
+    
     ALWAYS_INLINE uv_tcp_ext_t *initUVTcpObject(const Object &object, uv_loop_t *loop) {
         Resource resource(NEWOBJ(TcpResourceData(sizeof(uv_tcp_ext_t))));
         SET_RESOURCE(object, resource, s_uvtcp);
@@ -57,7 +75,7 @@ namespace HPHP {
     }
     
     static void close_cb(uv_handle_t* handle) {
-       ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
+       releaseHandle((uv_tcp_ext_t *) handle);    
     }
     
     static void connection_cb(uv_stream_t* server, int status) {
@@ -76,14 +94,7 @@ namespace HPHP {
     static void HHVM_METHOD(UVTcp, __destruct) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
-        echo("UVTCP gc...\n");
-        
-        if(tcp_handle->flag & UV_TCP_READ_START){
-            uv_read_stop((uv_stream_t *) tcp_handle);
-        }        
-        if(tcp_handle->flag & UV_TCP_HANDLE_START){
-            uv_unref((uv_handle_t *) tcp_handle);
-        }
+        releaseHandle(tcp_handle);    
     }
     
     static bool HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Object &onConnectCallback) {
@@ -119,7 +130,7 @@ namespace HPHP {
             return NULL;
         }
         client.get()->incRefCount();
-        client_tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
+        client_tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START|UV_TCP_HANDLE_INTERNAL_REF);
         uv_read_start((uv_stream_t *) client_tcp_handle, alloc_cb, read_cb);
         return client;
     }
