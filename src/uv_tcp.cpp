@@ -64,7 +64,7 @@ namespace HPHP {
     static void write_cb(uv_write_t *wr, int status) {
         write_req_t *req = (write_req_t *) wr;
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
-        Object callback = tcp_resource_data->getWriteCallback();
+        Variant callback = tcp_resource_data->getWriteCallback();
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
         }
@@ -98,7 +98,7 @@ namespace HPHP {
     
     static void connection_cb(uv_stream_t* server, int status) {
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) server)->tcp_object_data, TcpResourceData, s_uvtcp);
-        Object callback = tcp_resource_data->getConnectCallback();
+        Variant callback = tcp_resource_data->getConnectCallback();
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) server)->tcp_object_data, status));
         }
@@ -115,7 +115,7 @@ namespace HPHP {
         releaseHandle(tcp_handle);    
     }
     
-    static bool HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Object &onConnectCallback) {
+    static bool HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
         struct sockaddr_in addr;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
@@ -159,7 +159,7 @@ namespace HPHP {
         uv_close((uv_handle_t *) tcp_handle, close_cb);
     }
     
-    static void HHVM_METHOD(UVTcp, setCallback, const Object &onReadCallback, const Object &onWriteCallback, const Object &onErrorCallback) {
+    static void HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         resource_data->setReadCallback(onReadCallback);
         resource_data->setWriteCallback(onWriteCallback);

@@ -23,7 +23,7 @@ namespace HPHP {
         uv_signal_init((uv_loop_t*) loop_resource_data->getInternalResourceData(), signal_handle);
     }
     
-    static int64_t HHVM_METHOD(UVSignal, start, const Object &signal_cb, int64_t signo) {
+    static int64_t HHVM_METHOD(UVSignal, start, const Variant &signal_cb, int64_t signo) {
         CallbackResourceData *resource_data = FETCH_RESOURCE(this_, CallbackResourceData, s_uvsignal);
         uv_signal_ext_t *signal_handle = (uv_signal_ext_t *) resource_data->getInternalResourceData();
         resource_data->setCallback(signal_cb);

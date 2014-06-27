@@ -13,27 +13,26 @@
 
 #define GC_OBJECT_DATA(callback_object) \
     if(callback_object##_data != NULL){ \
-        decRefObj(callback_object##_data); \
+        delete callback_object##_data; \
         callback_object##_data = NULL; \
     }
     
 #define DECLARE_CALLBACK_OBJECT_DATA(object) \
-    private: ObjectData *object##_data = NULL;
+    private: Variant *object##_data = NULL;
 
 #define DECLARE_CALLBACK_OBJECT(method, object) \
-    public: void set##method(const Object &object); \
-    public: Object get##method(); \
+    public: void set##method(const Variant &object); \
+    public: Variant get##method(); \
     DECLARE_CALLBACK_OBJECT_DATA(object)
 
 #define IMPLEMENT_CALLBACK_OBJECT(classname, method, object) \
-    void classname::set##method(const Object &object) {\
+    void classname::set##method(const Variant &object) {\
         if(!object.isNull()){\
-            object##_data = object.get();\
-            object##_data->incRefCount(); \
+            object##_data = new Variant((const Variant)object);\
         } \
     } \
-    Object classname::get##method() {\
-        return Object(object##_data);\
+    Variant classname::get##method() {\
+        return *object##_data;\
     }
 namespace HPHP {
 
