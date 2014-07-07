@@ -3,11 +3,14 @@
 #define UV_TCP_HANDLE_INTERNAL_REF 1
 #define UV_TCP_HANDLE_START (1<<1)
 #define UV_TCP_READ_START (1<<2)
+//#define UV_TCP_CLIENT_CONNECT_START (1<<3)
 
 namespace HPHP {
 
     typedef struct uv_tcp_ext_s:public uv_tcp_t{
         uint flag;
+        uv_connect_t connect_req;
+        uv_shutdown_t shutdown_req;
         ObjectData *tcp_object_data;
         StringData *sockAddr;
         StringData *peerAddr;
@@ -96,6 +99,22 @@ namespace HPHP {
        releaseHandle((uv_tcp_ext_t *) handle);    
     }
     
+    static void client_connection_cb(uv_connect_t* req, int status) {
+        TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
+        Variant callback = tcp_resource_data->getConnectCallback();
+        if(!callback.isNull()){
+            vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+        }    
+    }
+    
+    static void shutdown_cb(uv_shutdown_t* req, int status) {
+        TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
+        Variant callback = tcp_resource_data->getShutdownCallback();
+        if(!callback.isNull()){
+            vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+        }    
+    }    
+    
     static void connection_cb(uv_stream_t* server, int status) {
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) server)->tcp_object_data, TcpResourceData, s_uvtcp);
         Variant callback = tcp_resource_data->getConnectCallback();
@@ -148,8 +167,7 @@ namespace HPHP {
             return NULL;
         }
         client.get()->incRefCount();
-        client_tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START|UV_TCP_HANDLE_INTERNAL_REF);
-        uv_read_start((uv_stream_t *) client_tcp_handle, alloc_cb, read_cb);
+        client_tcp_handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
         return client;
     }
     
@@ -161,9 +179,12 @@ namespace HPHP {
     
     static void HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();        
+        uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb);
         resource_data->setReadCallback(onReadCallback);
         resource_data->setWriteCallback(onWriteCallback);
-        resource_data->setErrorCallback(onErrorCallback);        
+        resource_data->setErrorCallback(onErrorCallback);
+        tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
     }
     
     static bool HHVM_METHOD(UVTcp, write, const String &data) {
@@ -265,18 +286,51 @@ namespace HPHP {
         
         return tcp_handle->peerPort;
     }
+
+    static bool HHVM_METHOD(UVTcp, connect, const String &host, int64_t port, const Variant &onConnectCallback) {
+        struct sockaddr_in addr;
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        
+        if(uv_ip4_addr(host.c_str(), port&0xffff, &addr)){
+            return false;
+        }
+        if(uv_tcp_connect(&tcp_handle->connect_req, (uv_tcp_t *) tcp_handle, (const struct sockaddr*) &addr, client_connection_cb)){
+            return false;
+        }
+        
+        resource_data->setConnectCallback(onConnectCallback);        
+        tcp_handle->flag |= UV_TCP_HANDLE_START;
+        return true;
+    }
+
+    static bool HHVM_METHOD(UVTcp, shutdown,const Variant &onShutdownCallback) {
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        
+        if(uv_shutdown(&tcp_handle->shutdown_req, (uv_stream_t *) tcp_handle, shutdown_cb)){
+            return false;
+        }
+        
+        resource_data->setShutdownCallback(onShutdownCallback);
+        tcp_handle->flag |= UV_TCP_HANDLE_START;
+        return true;
+    }
+
     
     void uvExtension::_initUVTcpClass() {
         HHVM_ME(UVTcp, __construct);
         HHVM_ME(UVTcp, __destruct);        
         HHVM_ME(UVTcp, listen);
+        HHVM_ME(UVTcp, connect);
         HHVM_ME(UVTcp, accept);
         HHVM_ME(UVTcp, close);
+        HHVM_ME(UVTcp, shutdown);
         HHVM_ME(UVTcp, setCallback);
         HHVM_ME(UVTcp, write);
         HHVM_ME(UVTcp, getSockname);
         HHVM_ME(UVTcp, getPeername);
         HHVM_ME(UVTcp, getSockport);
-        HHVM_ME(UVTcp, getPeerport);        
+        HHVM_ME(UVTcp, getPeerport);                
     }
 }
