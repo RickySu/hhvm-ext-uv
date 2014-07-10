@@ -54,6 +54,18 @@ namespace HPHP
         return -1;
     }
 
+    ALWAYS_INLINE StringData *sock_addr(struct sockaddr *addr) {
+        struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
+        char ip[20];
+        uv_ip4_name(&addr_in, ip, sizeof ip);
+        return StringData::Make(ip, CopyString);
+    }
+    
+    ALWAYS_INLINE int sock_port(struct sockaddr *addr) {
+        struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
+        return ntohs(addr_in.sin_port);
+    }
+    
 }
 
 #endif	/* UTIL_H */

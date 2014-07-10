@@ -198,18 +198,6 @@ namespace HPHP {
         return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb) == 0;
     }
     
-    ALWAYS_INLINE StringData *sock_addr(struct sockaddr *addr) {
-        struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
-        char ip[20];
-        uv_ip4_name(&addr_in, ip, sizeof ip);
-        return StringData::Make(ip, CopyString);
-    }
-    
-    ALWAYS_INLINE int sock_port(struct sockaddr *addr) {
-        struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
-        return ntohs(addr_in.sin_port);
-    }    
-    
     static String HHVM_METHOD(UVTcp, getSockname) {
         struct sockaddr addr;
         int addrlen;
@@ -257,7 +245,7 @@ namespace HPHP {
 
         if(tcp_handle->sockPort == -1){
             addrlen = sizeof addr;
-            if(uv_tcp_getpeername((const uv_tcp_t *)tcp_handle, &addr, &addrlen)){
+            if(uv_tcp_getsockname((const uv_tcp_t *)tcp_handle, &addr, &addrlen)){
                 return -1;
             }
             tcp_handle->sockAddr = sock_addr(&addr);
