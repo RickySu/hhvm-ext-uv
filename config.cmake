@@ -11,12 +11,14 @@ HHVM_EXTENSION(uv
     src/resource/CallbackResourceData.cpp
     src/resource/TcpResourceData.cpp
     src/resource/UdpResourceData.cpp
+    src/resource/ResolverResourceData.cpp
     src/ext.cpp
     src/uv_util.cpp
     src/uv_loop.cpp
     src/uv_signal.cpp
     src/uv_tcp.cpp
     src/uv_udp.cpp
+    src/uv_resolver.cpp
 )
 HHVM_SYSTEMLIB(uv ext_uv.php)
 

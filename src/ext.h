@@ -8,6 +8,7 @@
 #include "resource/CallbackResourceData.h"
 #include "resource/TcpResourceData.h"
 #include "resource/UdpResourceData.h"
+#include "resource/ResolverResourceData.h"
 #include "common.h"
 #include "util.h"
 #include <uv.h>
@@ -25,6 +26,7 @@ namespace HPHP
                 _initUVSignalClass();
                 _initUVTcpClass();
                 _initUVUdpClass();
+                _initUVResolverClass();
                 loadSystemlib();
             }
         private:
@@ -33,6 +35,7 @@ namespace HPHP
             void _initUVSignalClass();
             void _initUVTcpClass();
             void _initUVUdpClass();
+            void _initUVResolverClass();
     };
 }
 #endif
