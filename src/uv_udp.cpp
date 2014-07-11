@@ -59,9 +59,16 @@ namespace HPHP {
     static void send_cb(uv_udp_send_t* sr, int status) {
         send_req_t *req = (send_req_t *) sr;
         UdpResourceData *udp_resource_data = FETCH_RESOURCE(((uv_udp_ext_t *) req->handle)->udp_object_data, UdpResourceData, s_uvudp);
-        Variant callback = udp_resource_data->getSendCallback();
+        Variant callback = udp_resource_data->getSendCallback();        
         if(!callback.isNull()){
-            vm_call_user_func(callback, make_packed_array(((uv_udp_ext_t *) req->handle)->udp_object_data, status));
+            vm_call_user_func(callback, 
+                make_packed_array(
+                    ((uv_udp_ext_t *) req->handle)->udp_object_data,
+                    sock_addr((struct sockaddr *) &req->addr),
+                    sock_port((struct sockaddr *) &req->addr),
+                    status
+                )
+            );        
         }
         delete req->buf.base;
         delete req;
@@ -80,10 +87,8 @@ namespace HPHP {
                 vm_call_user_func(udp_resource_data->getRecvCallback(), 
                     make_packed_array(
                         ((uv_udp_ext_t *) handle)->udp_object_data,
-                        make_packed_array(
-                            sock_addr((struct sockaddr *) addr),
-                            sock_port((struct sockaddr *) addr)
-                        ),
+                        sock_addr((struct sockaddr *) addr),
+                        sock_port((struct sockaddr *) addr),
                         StringData::Make(buf->base, nread, CopyString),
                         (int64_t) flags
                     )
@@ -113,17 +118,35 @@ namespace HPHP {
         releaseHandle(udp_handle);    
     }
     
+    static bool HHVM_METHOD(UVUdp, bind, const String &host, int64_t port) {
+        struct sockaddr_in addr; 
+        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
+        
+        if(uv_ip4_addr(host.c_str(), port&0xffff, &addr)){
+            return false;
+        }
+        
+        if(uv_udp_bind(udp_handle, (const struct sockaddr*) &addr, 0)){
+            return false;
+        }
+        
+        udp_handle->flag |= UV_UDP_HANDLE_START;
+        return true;
+    }
+    
     static void HHVM_METHOD(UVUdp, close) {
         UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
-        uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) 
-        resource_data->getInternalResourceData();
+        uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();
         uv_close((uv_handle_t *) udp_handle, close_cb);
     }
         
    static void HHVM_METHOD(UVUdp, setCallback, const Variant &onRecvCallback, const Variant &onSendCallback, const Variant &onErrorCallback) {
         UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
-        uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb);
+        if(uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb) != 0) {
+            return;
+        }
         resource_data->setRecvCallback(onRecvCallback);
         resource_data->setSendCallback(onSendCallback);
         resource_data->setErrorCallback(onErrorCallback);
@@ -183,6 +206,7 @@ namespace HPHP {
     void uvExtension::_initUVUdpClass() {
         HHVM_ME(UVUdp, __construct);
         HHVM_ME(UVUdp, __destruct);
+        HHVM_ME(UVUdp, bind);
         HHVM_ME(UVUdp, close);
         HHVM_ME(UVUdp, setCallback);
         HHVM_ME(UVUdp, sendTo);
