@@ -4,7 +4,7 @@ set(LIBUV_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libuv)
 
 ExternalProject_Add(libuv
     GIT_REPOSITORY "https://github.com/joyent/libuv.git"
-    GIT_TAG "v0.11.25"
+    GIT_TAG "v0.11.26"
     SOURCE_DIR ${LIBUV_SOURCE}
     PATCH_COMMAND ${LIBUV_SOURCE}/autogen.sh
     CONFIGURE_COMMAND CFLAGS=-fPIC ${LIBUV_SOURCE}/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build
