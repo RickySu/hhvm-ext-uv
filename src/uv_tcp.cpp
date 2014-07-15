@@ -134,27 +134,28 @@ namespace HPHP {
         releaseHandle(tcp_handle);    
     }
     
-    static bool HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
+    static int64_t HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
+        int64_t ret;
         struct sockaddr_in addr;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         
-        if(uv_ip4_addr(host.c_str(), port&0xffff, &addr)){
-            return false;
+        if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr))!=0){
+            return ret;
         }
 
-        if(uv_tcp_bind(tcp_handle, (const struct sockaddr*) &addr, 0)){
-            return false;
+        if((ret = uv_tcp_bind(tcp_handle, (const struct sockaddr*) &addr, 0))!=0){
+            return ret;
         }
         
-        if(uv_listen((uv_stream_t *) tcp_handle, SOMAXCONN, connection_cb)){
-            return false;
+        if((ret = uv_listen((uv_stream_t *) tcp_handle, SOMAXCONN, connection_cb))!=0){
+            return ret;
         }
         
         resource_data->setConnectCallback(onConnectCallback);
         
         tcp_handle->flag |= UV_TCP_HANDLE_START;
-        return true;
+        return ret;
     }
     
     static Object HHVM_METHOD(UVTcp, accept) {
@@ -177,17 +178,22 @@ namespace HPHP {
         uv_close((uv_handle_t *) tcp_handle, close_cb);
     }
     
-    static void HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
+    static int64_t HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
+        int64_t ret;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();        
-        uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        ret = uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb);
+        if(ret != 0){
+            return ret;
+        }
         resource_data->setReadCallback(onReadCallback);
         resource_data->setWriteCallback(onWriteCallback);
         resource_data->setErrorCallback(onErrorCallback);
         tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
+        return ret;
     }
     
-    static bool HHVM_METHOD(UVTcp, write, const String &data) {
+    static int64_t HHVM_METHOD(UVTcp, write, const String &data) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         write_req_t *req;
@@ -195,7 +201,7 @@ namespace HPHP {
         req->buf.base = new char[data.size()];
         req->buf.len = data.size();
         memcpy((void *) req->buf.base, data.c_str(), data.size());        
-        return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb) == 0;
+        return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb);
     }
     
     static String HHVM_METHOD(UVTcp, getSockname) {
@@ -275,34 +281,36 @@ namespace HPHP {
         return tcp_handle->peerPort;
     }
 
-    static bool HHVM_METHOD(UVTcp, connect, const String &host, int64_t port, const Variant &onConnectCallback) {
+    static int64_t HHVM_METHOD(UVTcp, connect, const String &host, int64_t port, const Variant &onConnectCallback) {
+        int64_t ret;
         struct sockaddr_in addr;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         
-        if(uv_ip4_addr(host.c_str(), port&0xffff, &addr)){
-            return false;
+        if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
+            return ret;
         }
-        if(uv_tcp_connect(&tcp_handle->connect_req, (uv_tcp_t *) tcp_handle, (const struct sockaddr*) &addr, client_connection_cb)){
-            return false;
+        if((ret = uv_tcp_connect(&tcp_handle->connect_req, (uv_tcp_t *) tcp_handle, (const struct sockaddr*) &addr, client_connection_cb)) != 0){
+            return ret;
         }
         
         resource_data->setConnectCallback(onConnectCallback);        
         tcp_handle->flag |= UV_TCP_HANDLE_START;
-        return true;
+        return ret;
     }
 
-    static bool HHVM_METHOD(UVTcp, shutdown,const Variant &onShutdownCallback) {
+    static int64_t HHVM_METHOD(UVTcp, shutdown,const Variant &onShutdownCallback) {
+        int64_t ret;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         
-        if(uv_shutdown(&tcp_handle->shutdown_req, (uv_stream_t *) tcp_handle, shutdown_cb)){
-            return false;
+        if((ret = uv_shutdown(&tcp_handle->shutdown_req, (uv_stream_t *) tcp_handle, shutdown_cb)) != 0){
+            return ret;
         }
         
         resource_data->setShutdownCallback(onShutdownCallback);
         tcp_handle->flag |= UV_TCP_HANDLE_START;
-        return true;
+        return ret;
     }
 
     

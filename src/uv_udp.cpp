@@ -118,21 +118,22 @@ namespace HPHP {
         releaseHandle(udp_handle);    
     }
     
-    static bool HHVM_METHOD(UVUdp, bind, const String &host, int64_t port) {
+    static int64_t HHVM_METHOD(UVUdp, bind, const String &host, int64_t port) {
+        int64_t ret;        
         struct sockaddr_in addr; 
         UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
         
-        if(uv_ip4_addr(host.c_str(), port&0xffff, &addr)){
-            return false;
+        if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
+            return ret;
         }
         
-        if(uv_udp_bind(udp_handle, (const struct sockaddr*) &addr, 0)){
-            return false;
+        if((ret = uv_udp_bind(udp_handle, (const struct sockaddr*) &addr, 0)) != 0){
+            return ret;
         }
         
         udp_handle->flag |= UV_UDP_HANDLE_START;
-        return true;
+        return ret;
     }
     
     static void HHVM_METHOD(UVUdp, close) {
@@ -141,11 +142,12 @@ namespace HPHP {
         uv_close((uv_handle_t *) udp_handle, close_cb);
     }
         
-   static void HHVM_METHOD(UVUdp, setCallback, const Variant &onRecvCallback, const Variant &onSendCallback, const Variant &onErrorCallback) {
+   static int64_t HHVM_METHOD(UVUdp, setCallback, const Variant &onRecvCallback, const Variant &onSendCallback, const Variant &onErrorCallback) {
+        int64_t ret;
         UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
-        if(uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb) != 0) {
-            return;
+        if((ret = uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb)) != 0) {
+            return ret;
         }
         resource_data->setRecvCallback(onRecvCallback);
         resource_data->setSendCallback(onSendCallback);
@@ -191,7 +193,8 @@ namespace HPHP {
         return udp_handle->sockPort;
     }    
     
-    static bool HHVM_METHOD(UVUdp, sendTo, const String &dest, int64_t port, const String &data) {
+    static int64_t HHVM_METHOD(UVUdp, sendTo, const String &dest, int64_t port, const String &data) {
+        int64_t ret;
         UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
         send_req_t *req;
@@ -199,8 +202,10 @@ namespace HPHP {
         req->buf.base = new char[data.size()];
         req->buf.len = data.size();
         memcpy((void *) req->buf.base, data.c_str(), data.size());
-        uv_ip4_addr(dest.c_str(), port, &req->addr);
-        return uv_udp_send(req, udp_handle, &req->buf, 1, (const struct sockaddr *) &req->addr, send_cb) == 0;
+        if((ret = uv_ip4_addr(dest.c_str(), port, &req->addr)) != 0){
+            return ret;
+        }
+        return uv_udp_send(req, udp_handle, &req->buf, 1, (const struct sockaddr *) &req->addr, send_cb);
     }
     
     void uvExtension::_initUVUdpClass() {

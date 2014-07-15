@@ -56,27 +56,27 @@ namespace HPHP {
         uv_resolver_t *resolver = (uv_resolver_t *) resource_data->getInternalResourceData();
         uv_getaddrinfo_ext_t *getaddrinfo = new uv_getaddrinfo_ext_t();
         getaddrinfo->callback = new Variant(callback);
-        int r = uv_getaddrinfo(resolver->loop, getaddrinfo, on_addrinfo_resolved, node.c_str(), service.toString().c_str(), NULL);
-        if(r){
+        int ret = uv_getaddrinfo(resolver->loop, getaddrinfo, on_addrinfo_resolved, node.c_str(), service.toString().c_str(), NULL);
+        if(ret != 0){
             RELEASE_INFO(getaddrinfo);
         }
-        return r;
+        return ret;
     }
     
     static int64_t HHVM_METHOD(UVResolver, getnameinfo, const String &addr, const Variant &callback) {
+        int64_t ret;
         ResolverResourceData *resource_data = FETCH_RESOURCE(this_, ResolverResourceData, s_uvresolver);
         uv_resolver_t *resolver = (uv_resolver_t *) resource_data->getInternalResourceData();        
         static struct sockaddr_in addr4;
         uv_getnameinfo_ext_t *getnameinfo = new uv_getnameinfo_ext_t();
         getnameinfo->callback = new Variant(callback);        
-        if(uv_ip4_addr(addr.c_str(), 0, &addr4) !=0 ){
-            return -1;
+        if((ret = uv_ip4_addr(addr.c_str(), 0, &addr4)) !=0){
+            return ret;
         }
-        int r = uv_getnameinfo(resolver->loop, getnameinfo, on_nameinfo_resolved, (const struct sockaddr*) &addr4, 0);
-        if(r){
+        if((ret = uv_getnameinfo(resolver->loop, getnameinfo, on_nameinfo_resolved, (const struct sockaddr*) &addr4, 0)) != 0) {
             RELEASE_INFO(getnameinfo);
         }
-        return r;
+        return ret;
     }    
     void uvExtension::_initUVResolverClass() {
         HHVM_ME(UVResolver, __construct);
