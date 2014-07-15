@@ -20,7 +20,7 @@ if($pid){
 
 $loop = new UVLoop();
 $server = new UVTcp($loop);
-True($server->listen($host, $port, function($server) use($host, $port){
+Equal(0, $server->listen($host, $port, function($server) use($host, $port){
     Equal("$host:$port", "{$server->getSockname()}:{$server->getSockport()}", "Server socket address");
     $client = $server->accept();
     $client->setCallback(function($client, $recv) use($server){

@@ -140,20 +140,19 @@ namespace HPHP {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         
-        if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr))!=0){
+        if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
             return ret;
         }
 
-        if((ret = uv_tcp_bind(tcp_handle, (const struct sockaddr*) &addr, 0))!=0){
+        if((ret = uv_tcp_bind(tcp_handle, (const struct sockaddr*) &addr, 0)) != 0){
             return ret;
         }
         
-        if((ret = uv_listen((uv_stream_t *) tcp_handle, SOMAXCONN, connection_cb))!=0){
+        if((ret = uv_listen((uv_stream_t *) tcp_handle, SOMAXCONN, connection_cb)) != 0){
             return ret;
         }
         
-        resource_data->setConnectCallback(onConnectCallback);
-        
+        resource_data->setConnectCallback(onConnectCallback);        
         tcp_handle->flag |= UV_TCP_HANDLE_START;
         return ret;
     }
@@ -182,14 +181,12 @@ namespace HPHP {
         int64_t ret;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
-        ret = uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb);
-        if(ret != 0){
-            return ret;
+        if((ret = uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb)) == 0){
+            resource_data->setReadCallback(onReadCallback);
+            resource_data->setWriteCallback(onWriteCallback);
+            resource_data->setErrorCallback(onErrorCallback);
+            tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         }
-        resource_data->setReadCallback(onReadCallback);
-        resource_data->setWriteCallback(onWriteCallback);
-        resource_data->setErrorCallback(onErrorCallback);
-        tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         return ret;
     }
     

@@ -31,8 +31,8 @@ function errorCallback(){
 
 $loop = new UVLoop();
 $server = new UVUdp($loop);
-True($server->bind($host, $port), "Server Bind");
+Equal(0, $server->bind($host, $port), "Server Bind");
 Equal("$host:$port", "{$server->getSockname()}:{$server->getSockport()}", "getSockname() getSockPort()");
-$server->setCallback('recvCallback', 'sendCallback', 'errorCallback');
+Equal(0, $server->setCallback('recvCallback', 'sendCallback', 'errorCallback'), "setCallback");
 $loop->run();
 $server = null; //FIXME: prevent strange hhvm Assertion `!MemoryManager::sweeping()' failed.

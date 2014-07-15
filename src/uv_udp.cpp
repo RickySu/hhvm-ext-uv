@@ -146,13 +146,13 @@ namespace HPHP {
         int64_t ret;
         UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
-        if((ret = uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb)) != 0) {
-            return ret;
+        if((ret = uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb)) == 0) {
+            resource_data->setRecvCallback(onRecvCallback);
+            resource_data->setSendCallback(onSendCallback);
+            resource_data->setErrorCallback(onErrorCallback);
+            udp_handle->flag |= (UV_UDP_HANDLE_START|UV_UDP_READ_START);
         }
-        resource_data->setRecvCallback(onRecvCallback);
-        resource_data->setSendCallback(onSendCallback);
-        resource_data->setErrorCallback(onErrorCallback);
-        udp_handle->flag |= (UV_UDP_HANDLE_START|UV_UDP_READ_START);
+        return ret;
     }
     
     static String HHVM_METHOD(UVUdp, getSockname) {

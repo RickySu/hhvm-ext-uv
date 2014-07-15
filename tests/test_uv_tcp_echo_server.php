@@ -30,7 +30,7 @@ if($pid){
 $loop = new UVLoop();
 $server = new UVTcp($loop);
 $server->clientCloseTriggered = false;
-True($server->listen($host, $port, function($server) {
+Equal(0, $server->listen($host, $port, function($server) {
     $client = $server->accept();
     $client->setCallback(function($client, $recv) use($server){
         $client->write($recv);    
