@@ -123,9 +123,8 @@ namespace HPHP {
         }
     }
             
-    static void HHVM_METHOD(UVTcp, __construct, const Object &o_loop) {
-        InternalResourceData *loop_resource_data = FETCH_RESOURCE(o_loop, InternalResourceData, s_uvloop);
-        initUVTcpObject(this_, (uv_loop_t *) loop_resource_data->getInternalResourceData());
+    static void HHVM_METHOD(UVTcp, __construct) {
+        initUVTcpObject(this_, uv_default_loop());
     }
     
     static void HHVM_METHOD(UVTcp, __destruct) {

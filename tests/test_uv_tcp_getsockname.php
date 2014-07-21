@@ -18,8 +18,8 @@ if($pid){
     exit;
 }
 
-$loop = new UVLoop();
-$server = new UVTcp($loop);
+$loop = UVLoop::defaultLoop();
+$server = new UVTcp();
 Equal(0, $server->listen($host, $port, function($server) use($host, $port){
     Equal("$host:$port", "{$server->getSockname()}:{$server->getSockport()}", "Server socket address");
     $client = $server->accept();

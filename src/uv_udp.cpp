@@ -107,9 +107,8 @@ namespace HPHP {
        releaseHandle((uv_udp_ext_t *) handle);    
     }
     
-    static void HHVM_METHOD(UVUdp, __construct, const Object &o_loop) {
-        InternalResourceData *loop_resource_data = FETCH_RESOURCE(o_loop, InternalResourceData, s_uvloop);
-        initUVUdpObject(this_, (uv_loop_t *) loop_resource_data->getInternalResourceData());
+    static void HHVM_METHOD(UVUdp, __construct) {
+        initUVUdpObject(this_, uv_default_loop());
     }
     
     static void HHVM_METHOD(UVUdp, __destruct) {

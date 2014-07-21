@@ -13,14 +13,13 @@ namespace HPHP {
         vm_call_user_func(signal_resource_data->getCallback(), make_packed_array(((uv_signal_ext_t *) signal_handle)->signal_object_data, signo));
     }
     
-    static void HHVM_METHOD(UVSignal, __construct, const Object &o_loop) {
-        InternalResourceData *loop_resource_data = FETCH_RESOURCE(o_loop, InternalResourceData, s_uvloop);
+    static void HHVM_METHOD(UVSignal, __construct) {
         Resource resource(NEWOBJ(CallbackResourceData(sizeof(uv_signal_ext_t))));
         SET_RESOURCE(this_, resource, s_uvsignal);
         CallbackResourceData *signal_resource_data = FETCH_RESOURCE(this_, CallbackResourceData, s_uvsignal);
         uv_signal_ext_t *signal_handle = (uv_signal_ext_t*) signal_resource_data->getInternalResourceData();
         signal_handle->signal_object_data = this_.get();
-        uv_signal_init((uv_loop_t*) loop_resource_data->getInternalResourceData(), signal_handle);
+        uv_signal_init(uv_default_loop(), signal_handle);
     }
     
     static int64_t HHVM_METHOD(UVSignal, start, const Variant &signal_cb, int64_t signo) {

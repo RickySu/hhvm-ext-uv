@@ -2,16 +2,8 @@
 
 namespace HPHP {
 
-    static void HHVM_METHOD(UVLoop, __construct) {
-        Resource resource(NEWOBJ(InternalResourceData(sizeof(uv_loop_t))));
-        SET_RESOURCE(this_, resource, s_uvloop);
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
-        uv_loop_init((uv_loop_t *) resource_data->getInternalResourceData());
-    }
-
     static void HHVM_METHOD(UVLoop, run, int64_t option) {
         uv_run_mode mode;
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
         JIT::VMRegAnchor _;
         switch(option){
             case 0:
@@ -26,22 +18,19 @@ namespace HPHP {
             default:
                 mode = UV_RUN_DEFAULT;
         }
-        uv_run((uv_loop_t *) resource_data->getInternalResourceData(), mode);
+        uv_run(uv_default_loop(), mode);
     }
     
     static int64_t HHVM_METHOD(UVLoop, alive) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
-        return uv_loop_alive((const uv_loop_t *)resource_data->getInternalResourceData());
+        return uv_loop_alive(uv_default_loop());
     }
     
     static void HHVM_METHOD(UVLoop, updateTime) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
-        uv_update_time((uv_loop_t *)resource_data->getInternalResourceData());
+        uv_update_time(uv_default_loop());
     }
     
     static int64_t HHVM_METHOD(UVLoop, now) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
-        return uv_now((const uv_loop_t *)resource_data->getInternalResourceData());
+        return uv_now(uv_default_loop());
     }
     
     static int64_t HHVM_METHOD(UVLoop, backendFd) {
@@ -50,12 +39,10 @@ namespace HPHP {
     }
     
     static int64_t HHVM_METHOD(UVLoop, backendTimeout) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
-        return uv_backend_timeout((const uv_loop_t *)resource_data->getInternalResourceData());
+        return uv_backend_timeout(uv_default_loop());
     }    
     
     void uvExtension::_initUVLoopClass() {
-        HHVM_ME(UVLoop, __construct);
         HHVM_ME(UVLoop, run);
         HHVM_ME(UVLoop, alive);
         HHVM_ME(UVLoop, updateTime);

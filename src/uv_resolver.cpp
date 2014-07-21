@@ -42,13 +42,12 @@ namespace HPHP {
         RELEASE_INFO(info);
     }
     
-    static void HHVM_METHOD(UVResolver, __construct, const Object &o_loop) {
-        InternalResourceData *loop_resource_data = FETCH_RESOURCE(o_loop, InternalResourceData, s_uvloop);
+    static void HHVM_METHOD(UVResolver, __construct) {
         Resource resource(NEWOBJ(ResolverResourceData(sizeof(uv_resolver_t))));
         SET_RESOURCE(this_, resource, s_uvresolver);
         ResolverResourceData *resolver_resource_data = FETCH_RESOURCE(this_, ResolverResourceData, s_uvresolver);
         uv_resolver_t *resolver = (uv_resolver_t *) resolver_resource_data->getInternalResourceData();
-        resolver->loop = (uv_loop_t*) loop_resource_data->getInternalResourceData();
+        resolver->loop = uv_default_loop();
     }
     
     static int64_t HHVM_METHOD(UVResolver, getaddrinfo, const String &node, const Variant &service, const Variant &callback) {
