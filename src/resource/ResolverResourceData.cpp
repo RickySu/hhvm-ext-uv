@@ -14,7 +14,6 @@ namespace HPHP {
     }
 
     ResolverResourceData::~ResolverResourceData() {
-        GC_OBJECT_DATA(getnameinfo_callback_object);
     }
 
 }

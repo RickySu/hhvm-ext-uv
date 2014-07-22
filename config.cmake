@@ -19,6 +19,7 @@ HHVM_EXTENSION(uv
     src/uv_tcp.cpp
     src/uv_udp.cpp
     src/uv_resolver.cpp
+    src/uv_timer.cpp
 )
 HHVM_SYSTEMLIB(uv ext_uv.php)
 

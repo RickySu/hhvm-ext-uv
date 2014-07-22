@@ -76,7 +76,8 @@ namespace HPHP {
             RELEASE_INFO(getnameinfo);
         }
         return ret;
-    }    
+    }
+    
     void uvExtension::_initUVResolverClass() {
         HHVM_ME(UVResolver, __construct);
         HHVM_ME(UVResolver, getaddrinfo);

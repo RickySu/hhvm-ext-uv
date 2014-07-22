@@ -14,7 +14,6 @@ namespace HPHP {
     }
 
     CallbackResourceData::~CallbackResourceData() {
-        GC_OBJECT_DATA(callback_object);
     }
 
 }

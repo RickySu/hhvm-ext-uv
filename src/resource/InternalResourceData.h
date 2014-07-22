@@ -11,28 +11,20 @@
 #include "hphp/runtime/base/base-includes.h"
 #include <uv.h>
 
-#define GC_OBJECT_DATA(callback_object) \
-    if(callback_object##_data != NULL){ \
-        delete callback_object##_data; \
-        callback_object##_data = NULL; \
-    }
-    
 #define DECLARE_CALLBACK_OBJECT_DATA(object) \
-    private: Variant *object##_data = NULL;
+    private: Variant object##_data;
 
 #define DECLARE_CALLBACK_OBJECT(method, object) \
     public: void set##method(const Variant &object); \
-    public: Variant get##method(); \
+    public: Variant &get##method(); \
     DECLARE_CALLBACK_OBJECT_DATA(object)
 
 #define IMPLEMENT_CALLBACK_OBJECT(classname, method, object) \
     void classname::set##method(const Variant &object) {\
-        if(!object.isNull()){\
-            object##_data = new Variant((const Variant)object);\
-        } \
+            object##_data = object;\
     } \
-    Variant classname::get##method() {\
-        return *object##_data;\
+    Variant &classname::get##method() {\
+        return object##_data;\
     }
 namespace HPHP {
 

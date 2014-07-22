@@ -16,9 +16,6 @@ namespace HPHP {
     }
 
     UdpResourceData::~UdpResourceData() {
-        GC_OBJECT_DATA(recv_callback_object);
-        GC_OBJECT_DATA(send_callback_object);
-        GC_OBJECT_DATA(error_callback_object);
     }
 
 }
