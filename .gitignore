@@ -1,2 +1,3 @@
 tests/*.diff
 tests/*.out
+thirdparty/
