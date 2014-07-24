@@ -1,10 +1,11 @@
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 include(buildLibuv)
+include(buildr3)
 
 CONFIGURE_FILE(${CMAKE_CURRENT_BINARY_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 include_directories(${LIBUV_INCLUDE_DIR})
-set(LIBUV_LIBRARIES "${LIBUV_LIB}/libuv.a")
+set(LIBUV_LIBRARIES ${LIBUV_LIB}/libuv.a ${R3_LIB}/libr3.a)
 
 HHVM_EXTENSION(uv
     src/resource/InternalResourceData.cpp
