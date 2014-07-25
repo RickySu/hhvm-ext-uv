@@ -64,12 +64,12 @@ namespace HPHP {
         return tcp_handle;
     }    
 
-    static void write_cb(uv_write_t *wr, int status) {
+    static void write_cb(uv_write_t *wr, int status) {      
         write_req_t *req = (write_req_t *) wr;
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
         Variant callback = tcp_resource_data->getWriteCallback();
         if(!callback.isNull()){
-            vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+            vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status, req->buf.len));
         }
         delete req->buf.base;
         delete req;

@@ -9,7 +9,8 @@ namespace HPHP
         s_uvtcp("UVTcp"),
         s_uvudp("UVUdp"),
         s_uvresolver("UVResolver"),
-        s_uvtimer("UVTimer")
+        s_uvtimer("UVTimer"),
+        s_uvhttpserver("UVHttpServer")
     ;
 }
 #endif	/* COMMON_H */
