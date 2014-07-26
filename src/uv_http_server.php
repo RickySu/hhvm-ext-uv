@@ -1,34 +1,36 @@
 <?hh
 class UVHttpServer
 {
-    private ?resource $_rs = null;
+    private resource $_rs = null;
     private ?UVTcp $server = null;
     protected array $callbacks = [];
+    private ?string $host = '0.0.0.0';
+    private int $port = 80;
 
-    <<__Native>> private function r3TreeCreate(int $n = 10):void;
-    <<__Native>> private function r3TreeFree():void;
-
-    function __construct(string $host, int $port):void
+    <<__Native>>function __construct():void;
+    <<__Native>>private function _R3Compile():void;
+    
+    function listen(string $host, int $port):UVHttpServer
     {
-        $this->r3TreeCreate();
-        $this->server = new UVTcp();
-        $this->server->listen($host, $port, function($server){
-            new UVHttpClient($server->accept(), function(UVHttpCLient $client){
-                ($this->callbacks[0])($client);
-            });
-        });        
+        $this->host = $host;
+        $this->port = $port;    
     }
     
-    function __destruct()
-    {
-        if($this->_rs !== null){
-            $this->r3TreeFree();
-            $this->_rs = null;
-        }
-    }
-    
-    function onRequest(string $pattern, mixed $callback, ?array<string> $allowMethod = null)
+    function onRequest(string $pattern, mixed $callback, ?array<string> $allowMethod = null):UVHttpServer
     {    
         $this->callbacks[] = $callback;
     }
+    
+    function start():int
+    {
+        $this->_R3Compile();    
+        $this->server = new UVTcp();
+        return $this->server->listen($this->host, $this->port, function($server){
+            new UVHttpClient($server->accept(), function(UVHttpCLient $client){
+                ($this->callbacks[0])($client);
+            });
+        });    
+
+    }
+    
 }

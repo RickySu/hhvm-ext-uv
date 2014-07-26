@@ -20,6 +20,7 @@ HHVM_EXTENSION(uv
     src/resource/TcpResourceData.cpp
     src/resource/UdpResourceData.cpp
     src/resource/ResolverResourceData.cpp
+    src/resource/R3ResourceData.cpp
     src/ext.cpp
     src/uv_util.cpp
     src/uv_loop.cpp

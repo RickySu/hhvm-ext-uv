@@ -9,6 +9,7 @@
 #include "resource/TcpResourceData.h"
 #include "resource/UdpResourceData.h"
 #include "resource/ResolverResourceData.h"
+#include "resource/R3ResourceData.h"
 #include "common.h"
 #include "util.h"
 #include <uv.h>
