@@ -9,11 +9,37 @@ class UVHttpServer
     const METHOD_HEAD = 64;
     const METHOD_OPTIONS = 128;
     
+    private ?resource $_rs = null;
     private ?UVTcp $server = null;
     protected array $routes = [];
     protected ?mixed $defaultCallback = null;
+    protected ?string $host;
+    protected ?int $port;
 
-    <<__Native>>private function _R3Match(array $routes, string $uri, int $method):array;
+    <<__Native>>private function _R3RoutesAdd(array $routes):mixed;
+    <<__Native>>private function _R3Match(string $uri, int $method):array;    
+    
+    function start():void{
+        $this->_R3RoutesAdd($this->routes);
+        $this->server = new UVTcp();
+        $this->server->listen($this->host, $this->port, function($server){
+            new UVHttpClient($server->accept(), function(UVHttpCLient $client) {
+                if($this->routes){
+                    $result = $this->_R3Match($client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));
+                    if($result){
+                        if($result[1]){
+                            call_user_func_array($this->routes[$result[0]][2], array_merge(array($client), $result[1]));
+                        }
+                        else{
+                            ($this->routes[$result[0]][2])($client);
+                        }
+                        return;
+                    }
+                }
+                ($this->defaultCallback)($client);
+            });
+        });        
+    }
     
     function __construct(string $host, int $port): void
     {
@@ -21,17 +47,9 @@ class UVHttpServer
             $client->sendReply('Page not found.', 404);
             $client->setCloseOnBufferEmpty();
         };
-        $this->server = new UVTcp();
-        return $this->server->listen($host, $port, function($server){
-            new UVHttpClient($server->accept(), function(UVHttpCLient $client){
-                $result = $this->_R3Match($this->routes, $client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));
-                if($result){
-                    call_user_func_array($this->routes[$result[0]][2], array_merge(array($client), $result[1]));
-                    return;
-                }
-                ($this->defaultCallback)($client);
-            });
-        });        
+        $this->host = $host;
+        $this->port = $port;
+
     }
     
     protected function convertMethod(?array<string> $allowMethod):int
@@ -74,6 +92,13 @@ class UVHttpServer
             $this->convertMethod($allowMethod),            
             $callback,
         );
+        return $this;
+    }
+    
+    function onDefaultRequest(mixed $callback):UVHttpServer
+    {
+        $this->defaultCallback = $callback;
+        return $this;
     }
     
 }
