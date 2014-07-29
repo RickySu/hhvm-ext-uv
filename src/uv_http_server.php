@@ -23,7 +23,7 @@ class UVHttpServer
         $this->_R3RoutesAdd($this->routes);
         $this->server = new UVTcp();
         $this->server->listen($this->host, $this->port, function($server){
-            new UVHttpClient($server->accept(), function(UVHttpCLient $client) {
+            new UVHttpClient($server->accept(), function(UVHttpClient $client) {
                 if($this->routes){
                     $result = $this->_R3Match($client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));
                     if($result){

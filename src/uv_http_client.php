@@ -9,6 +9,9 @@ class UVHttpClient
     protected ?callable $onError = null;
     protected ?array<string, string> $http = null;
     protected ?callable $onRequest = null;
+    protected ?mixed $onCustomRead = null;
+    protected ?mixed $onCustomWrite = null;
+    protected ?mixed $onCustomError = null;
     
     function __construct(UVTcp $client, ?callable $onRequest)
     {
@@ -19,6 +22,7 @@ class UVHttpClient
         $this->http = [
             'request' => null,
             'header' => null,
+            'rawheader' => null,
             'body' => null,        
         ];
         $this->onRequest = $onRequest;
@@ -67,27 +71,35 @@ class UVHttpClient
             $rawHeader .= "$key: $val\r\n";
         }
         $this->write("HTTP/$httpVersion $status OK\r\n$rawHeader\r\n$content");
-    }
+    }        
     
     protected function requestParser(string $rawHeader): ?array<string, string>
     {
         $pos = strpos($rawHeader, "\r\n");
         $line = substr($rawHeader, 0, $pos);
-        list($method, $query, $protocol) = explode(' ', $line);
-        $pos = strpos($query, '?');
+        $request = explode(' ', $line);
+        if(
+            count($request) != 3 ||
+            !in_array($request[0], array('GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS')) ||
+            !preg_match('/^HTTP\/\d+\.\d+/', $request[2])
+        ){
+            //bad request method
+            $this->close();
+        }
+        $pos = strpos($request[1], '?');
         if($pos === false){
-            $uri = $query;
+            $uri = $request[1];
             $parameters = [];
         }
         else{
-            $uri = substr($query, 0, $pos);
-            parse_str(substr($query, $pos + 1), $parameters);
+            $uri = substr($request[1], 0, $pos);
+            parse_str(substr($request[1], $pos + 1), $parameters);
         }
         return [
-            'method' => $method,
+            'method' => $request[0],
             'uri' => $uri,            
             'parameters' => $parameters,
-            'protocol' => $protocol,
+            'protocol' => $request[2],
         ];
     }
     
@@ -107,16 +119,21 @@ class UVHttpClient
     
     protected function initHeader(string $data): bool
     {
-        $pos = strpos($data, "\r\n\r\n");
+        $this->http['rawheader'] .= $data;    
+        $pos = strpos($this->http['rawheader'], "\r\n\r\n");
         if($pos === false){
-            $this->http['header'] .= $data;
+            if(strlen($this->http['rawheader']) > 4096){
+                $this->close();
+            }
+            return false;
         }
         else{                
-            $this->http['header'] .= substr($data, 0, $pos);
+            $this->http['rawheader'] .= substr($data, 0, $pos);
             $this->http['body'] .= substr($data, $pos + 4);
         }
-        $this->http['request'] = $this->requestParser($this->http['header']);
-        $this->http['header'] = $this->headerParser($this->http['header']);
+        $this->http['request'] = $this->requestParser($this->http['rawheader']);
+        $this->http['header'] = $this->headerParser($this->http['rawheader']);
+        unset($this->http['rawheader']);
         return $this->http['header'] !== null;
     }
     
@@ -124,6 +141,10 @@ class UVHttpClient
     {
         $this->onRead = function(UVTcp $client, string $data)
         {
+            if($this->onCustomRead !== null){
+                ($this->onCustomRead)($this, $data);
+                return;
+            }
             if($this->http['header'] === null) {
                 // header uninitialized
                 if($this->initHeader($data)){
@@ -136,6 +157,10 @@ class UVHttpClient
         
         $this->onWrite = function(UVTcp $client, int $status, int $sendSize)
         {
+            if($this->onCustomWrite !== null){
+                ($this->onCustomWrite)($this, $statuc, $sendSize);
+                return;
+            }
             if($status != 0){
                 $this->close();
                 return;
@@ -148,8 +173,12 @@ class UVHttpClient
             }
         };
         
-        $this->onError = function(UVTcp $client)
+        $this->onError = function(UVTcp $client, int $nread)
         {
+            if($this->onCustomError !== null){
+                ($this->onCustomError)($this, $nread);
+                return;
+            }            
             $this->close();
         };
     }
@@ -167,5 +196,19 @@ class UVHttpClient
             $this->client = null;
         }
     }
+
+    public function onRead(mixed $onRead): void
+    {
+        $this->onCustomRead = $onRead;
+    }
     
+    public function onWrite(mixed $onWrite): void
+    {
+        $this->onCustomWrite = $onWrite;
+    }    
+    
+    public function onError(mixed $onError): void
+    {
+        $this->onCustomError = $onError;
+    }    
 }
