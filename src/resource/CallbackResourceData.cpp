@@ -14,6 +14,7 @@ namespace HPHP {
     }
 
     CallbackResourceData::~CallbackResourceData() {
+        SWEEP_CALLBACK_OBJECT_DATA(callback_object);
     }
 
 }

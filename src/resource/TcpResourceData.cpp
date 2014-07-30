@@ -18,6 +18,11 @@ namespace HPHP {
     }
 
     TcpResourceData::~TcpResourceData() {
+        SWEEP_CALLBACK_OBJECT_DATA(connect_callback_object);
+        SWEEP_CALLBACK_OBJECT_DATA(read_callback_object);        
+        SWEEP_CALLBACK_OBJECT_DATA(write_callback_object);
+        SWEEP_CALLBACK_OBJECT_DATA(error_callback_object);
+        SWEEP_CALLBACK_OBJECT_DATA(shutdown_callback_object);
     }
 
 }

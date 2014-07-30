@@ -14,6 +14,7 @@ namespace HPHP {
     }
 
     ResolverResourceData::~ResolverResourceData() {
+        SWEEP_CALLBACK_OBJECT_DATA(getnameinfo_callback_object);
     }
 
 }

@@ -14,6 +14,9 @@
 #define DECLARE_CALLBACK_OBJECT_DATA(object) \
     private: Variant object##_data;
 
+#define SWEEP_CALLBACK_OBJECT_DATA(object) \
+    this->object##_data.releaseForSweep();
+
 #define DECLARE_CALLBACK_OBJECT(method, object) \
     public: void set##method(const Variant &object); \
     public: Variant &get##method(); \

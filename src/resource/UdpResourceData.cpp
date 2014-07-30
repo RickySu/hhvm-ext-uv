@@ -16,6 +16,9 @@ namespace HPHP {
     }
 
     UdpResourceData::~UdpResourceData() {
+        SWEEP_CALLBACK_OBJECT_DATA(recv_callback_object);
+        SWEEP_CALLBACK_OBJECT_DATA(send_callback_object);
+        SWEEP_CALLBACK_OBJECT_DATA(error_callback_object);
     }
 
 }
