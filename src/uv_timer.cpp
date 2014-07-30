@@ -36,7 +36,7 @@ namespace HPHP {
         int64_t ret = uv_timer_start(timer_handle, (uv_timer_cb) timer_handle_callback, start, repeat);
         if(ret == 0){
             timer_handle->start = true;
-            timer_handle->timer_object_data = this_.get();
+            timer_handle->timer_object_data = this_;
             timer_handle->timer_object_data->incRefCount();
         }
         return ret;

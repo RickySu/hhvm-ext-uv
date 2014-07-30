@@ -4,7 +4,7 @@ namespace HPHP {
 
     static void HHVM_METHOD(UVLoop, run, int64_t option) {
         uv_run_mode mode;
-        JIT::VMRegAnchor _;
+        VMRegAnchor _;
         switch(option){
             case 0:
                 mode = UV_RUN_DEFAULT;
