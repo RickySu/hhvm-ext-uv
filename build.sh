@@ -1,7 +1,5 @@
 #! /bin/sh
-if which hphpize > /dev/null; then
-    HPHPIZE_PATH=hphpize
-else
+if [ -z "$HPHPIZE_PATH" ]; then
     if [ -z "$HPHP_HOME" ]; then
         echo HPHP_HOME environment variable must be set!
         exit 1
