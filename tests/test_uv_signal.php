@@ -15,4 +15,3 @@ $signal->start(function($signal, $signo){
     $signal->stop();
 }, SIGUSR1);
 $loop->run();
-$signal = null; //FIXME: prevent strange hhvm Assertion `!MemoryManager::sweeping()' failed.

@@ -50,4 +50,3 @@ Equal(0, $server->listen($host, $port, function($server) {
     }    
 }), "Server listen");
 $loop->run();
-$server = null; //FIXME: prevent strange hhvm Assertion `!MemoryManager::sweeping()' failed.

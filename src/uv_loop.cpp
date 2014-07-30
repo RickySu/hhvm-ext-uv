@@ -1,7 +1,8 @@
 #include "ext.h"
 
 namespace HPHP {
-
+    using JIT::VMRegAnchor;
+    
     static void HHVM_METHOD(UVLoop, run, int64_t option) {
         uv_run_mode mode;
         VMRegAnchor _;

@@ -35,4 +35,3 @@ Equal(0, $server->bind($host, $port), "Server Bind");
 Equal("$host:$port", "{$server->getSockname()}:{$server->getSockport()}", "getSockname() getSockPort()");
 Equal(0, $server->setCallback('recvCallback', 'sendCallback', 'errorCallback'), "setCallback");
 $loop->run();
-$server = null; //FIXME: prevent strange hhvm Assertion `!MemoryManager::sweeping()' failed.

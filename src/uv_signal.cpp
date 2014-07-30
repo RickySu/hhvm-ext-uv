@@ -18,7 +18,7 @@ namespace HPHP {
         SET_RESOURCE(this_, resource, s_uvsignal);
         CallbackResourceData *signal_resource_data = FETCH_RESOURCE(this_, CallbackResourceData, s_uvsignal);
         uv_signal_ext_t *signal_handle = (uv_signal_ext_t*) signal_resource_data->getInternalResourceData();
-        signal_handle->signal_object_data = this_;
+        signal_handle->signal_object_data = getThisOjectData(this_);
         uv_signal_init(uv_default_loop(), signal_handle);
     }
     
@@ -29,7 +29,7 @@ namespace HPHP {
         signal_handle->start = true;
         int64_t ret = uv_signal_start(signal_handle, (uv_signal_cb) signal_handle_callback, signo);
         if(ret == 0){
-            this_->incRefCount();
+            getThisOjectData(this_)->incRefCount();
         }
         return ret;
     }
@@ -40,7 +40,7 @@ namespace HPHP {
         int64_t ret = 0;
         if(signal_handle->start){
             ret = uv_signal_stop((uv_signal_t *) signal_handle);
-            this_->decRefAndRelease();
+            getThisOjectData(this_)->decRefAndRelease();
             signal_handle->start = false;            
         }
         return ret;

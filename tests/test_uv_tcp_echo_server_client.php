@@ -38,4 +38,3 @@ $client->connect($host, $port, function($client, $status) use($randomValue){
 });
 
 $loop->run();
-$client = null; //FIXME: prevent strange hhvm Assertion `!MemoryManager::sweeping()' failed.

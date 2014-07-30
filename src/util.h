@@ -66,6 +66,13 @@ namespace HPHP
         return ntohs(addr_in.sin_port);
     }
     
+    ALWAYS_INLINE ObjectData* getThisOjectData(const Object &obj){
+        return obj.get();
+    }
+    
+    ALWAYS_INLINE ObjectData* getThisObjectData(ObjectData *objdata){
+        return objdata;
+    }    
 }
 
 #endif	/* UTIL_H */
