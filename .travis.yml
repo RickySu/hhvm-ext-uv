@@ -1,0 +1,13 @@
+language: cpp
+
+compiler:
+    - gcc
+
+before_script:
+    -  wget -O - http://dl.hhvm.com/conf/hhvm.gpg.key | sudo apt-key add -
+    -  echo deb http://dl.hhvm.com/ubuntu saucy main | sudo tee /etc/apt/sources.list.d/hhvm.list
+    -  sudo apt-get update
+    -  sudo apt-get install hhvm-dbg hhvm-dev cmake check libpcre3 libpcre3-dev libjemalloc-dev libjemalloc1 build-essential libtool automake autoconf pkg-config
+script:
+    -  HPHPIZE_PATH=/usr/bin/hphpize ./build.sh
+    -  HHVM_BIN=/usr/bin/hhvm ./run-tests.sh
