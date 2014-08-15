@@ -1,8 +1,11 @@
 #include "ext.h"
 
 namespace HPHP {
+
+#if HHVM_API_VERSION < 20140702L
     using JIT::VMRegAnchor;
-    
+#endif
+
     static void HHVM_METHOD(UVLoop, run, int64_t option) {
         uv_run_mode mode;
         VMRegAnchor _;
