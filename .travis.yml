@@ -16,4 +16,4 @@ before_script:
     -  sudo update-alternatives --set gcc /usr/bin/gcc-4.8
 script:
     -  HPHPIZE_PATH=/usr/bin/hphpize ./build.sh
-    -  HHVM_BIN=/usr/bin/hhvm ./run-tests.sh
+#    -  HHVM_BIN=/usr/bin/hhvm ./run-tests.sh
