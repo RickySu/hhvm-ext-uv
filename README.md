@@ -67,3 +67,7 @@ $server->listen($host, $port, function($server){
 });
 UVLoop::defaultLoop()->run();
 ```
+
+## LICENSE
+
+This software is released under MIT License.
