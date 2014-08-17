@@ -68,6 +68,10 @@ $server->listen($host, $port, function($server){
 UVLoop::defaultLoop()->run();
 ```
 
+## benchmark
+
+[benchmark](https://gist.github.com/RickySu/8edb9bcc58829e5478ac)
+
 ## LICENSE
 
 This software is released under MIT License.
