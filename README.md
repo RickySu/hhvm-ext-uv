@@ -39,11 +39,9 @@ $server = new UVHttpServer('127.0.0.1', 8080);
 $server
 ->onRequest('/post/{id:\\d+}/{foo}', function(UVHttpClient $client, $id, $foo){
     $client->sendReply("match /post/$id/$foo");
-    $client->setCloseOnBufferEmpty();  //shutdown socket after data sent.
 })
 ->onDefaultRequest(function(UVHttpClient $client){
     $client->sendReply("hello world");
-    $client->setCloseOnBufferEmpty();
 })
 ->start();
 UVLoop::defaultLoop()->run();  //run event loop.

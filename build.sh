@@ -7,10 +7,15 @@ if [ -z "$HPHPIZE_PATH" ]; then
     HPHPIZE_PATH=$HPHP_HOME/hphp/tools/hphpize/hphpize    
 fi
 
-printf "<?hh\n" > ext_uv.php
-tail -q -n +2 src/*php src/types/*php src/exceptions/*php >> ext_uv.php
+if [ -z "$HHVM_BIN" ]; then
+    if [ -z "$HPHP_HOME" ]; then
+        HHVM_BIN=env hhvm
+    else
+        HHVM_BIN=$HPHP_HOME/hphp/hhvm/hhvm
+    fi
+fi
 
-
+tail -q -n +2 src/*.php src/types/*.php src/exceptions/*.php | $HHVM_BIN tools/minify.php > ext_uv.php
 
 CMAKE_MODULE_PATH="./CMake" $HPHPIZE_PATH
 
