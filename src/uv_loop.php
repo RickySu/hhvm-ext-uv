@@ -2,11 +2,11 @@
 class UVLoop
 {
     private static ?UVLoop $loop = null;
-    
+
     const UV_RUN_DEFAULT = 0;
     const UV_RUN_ONCE = 1;
     const UV_RUN_NOWAIT = 2;
-    
+
     public static function defaultLoop():UVLoop
     {
         if(self::$loop === null){

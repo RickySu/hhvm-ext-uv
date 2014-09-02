@@ -14,5 +14,5 @@ class UVTcp
     <<__Native>> function getSockname(): string;
     <<__Native>> function getPeername(): string;
     <<__Native>> function getSockport(): int;
-    <<__Native>> function getPeerport(): int;    
+    <<__Native>> function getPeerport(): int;
 }

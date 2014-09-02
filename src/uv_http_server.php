@@ -8,7 +8,7 @@ class UVHttpServer
     const METHOD_PATCH = 32;
     const METHOD_HEAD = 64;
     const METHOD_OPTIONS = 128;
-    
+
     private ?resource $_rs = null;
     private ?UVTcp $server = null;
     protected array $routes = [];
@@ -17,8 +17,8 @@ class UVHttpServer
     protected ?int $port;
 
     <<__Native>>private function _R3RoutesAdd(array $routes):mixed;
-    <<__Native>>private function _R3Match(string $uri, int $method):array;    
-    
+    <<__Native>>private function _R3Match(string $uri, int $method):array;
+
     function start():void{
         $this->_R3RoutesAdd($this->routes);
         $this->server = new UVTcp();
@@ -38,9 +38,9 @@ class UVHttpServer
                 }
                 ($this->defaultCallback)($client);
             });
-        });        
+        });
     }
-    
+
     function __construct(string $host, int $port): void
     {
         $this->defaultCallback = function(UVHttpCLient $client){
@@ -51,7 +51,7 @@ class UVHttpServer
         $this->port = $port;
 
     }
-    
+
     protected function convertMethod(?array<string> $allowMethod):int
     {
         $allowMethodPacked = 0;
@@ -63,16 +63,16 @@ class UVHttpServer
                         break;
                     case 'POST':
                         $allowMethodPacked|=self::METHOD_POST;
-                        break;                                            
+                        break;
                     case 'PUT':
                         $allowMethodPacked|=self::METHOD_PUT;
-                        break;                    
+                        break;
                     case 'DELETE':
                         $allowMethodPacked|=self::METHOD_DELETE;
-                        break;                    
+                        break;
                     case 'PATCH':
                         $allowMethodPacked|=self::METHOD_PATCH;
-                        break;                    
+                        break;
                     case 'HEAD':
                         $allowMethodPacked|=self::METHOD_HEAD;
                         break;
@@ -84,21 +84,21 @@ class UVHttpServer
         }
         return $allowMethodPacked;
     }
-    
+
     function onRequest(string $pattern, mixed $callback, ?array<string> $allowMethod = null):UVHttpServer
-    {    
+    {
         $this->routes[] = array(
-            $pattern,            
-            $this->convertMethod($allowMethod),            
+            $pattern,
+            $this->convertMethod($allowMethod),
             $callback,
         );
         return $this;
     }
-    
+
     function onDefaultRequest(mixed $callback):UVHttpServer
     {
         $this->defaultCallback = $callback;
         return $this;
     }
-    
+
 }
