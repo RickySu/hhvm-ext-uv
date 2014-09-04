@@ -25,7 +25,7 @@ class UVHttpServer
         $this->server->listen($this->host, $this->port, function($server){
             new UVHttpClient($server->accept(), function(UVHttpClient $client) {
                 if($this->routes){
-                    $result = $this->_R3Match($client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));
+                    $result = $this->_R3Match($client->getRequest()['request']['uri']['path'], $this->convertMethod([$client->getRequest()['request']['method']]));
                     if($result){
                         if($result[1]){
                             call_user_func_array($this->routes[$result[0]][2], array_merge(array($client), $result[1]));

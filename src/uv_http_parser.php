@@ -10,7 +10,10 @@ class UVHttpParser
     public ?array<string> $headers = [];
     public ?array $url;
     public ?string $method;
+    public ?string $body;
     public bool $keepAlive = false;
+    public int $httpMajro = 0;
+    public int $httpMinor = 0;
     
     const PARSE_TYPE_REQUEST = 0;
     const PARSE_TYPE_RESPONSE = 1;

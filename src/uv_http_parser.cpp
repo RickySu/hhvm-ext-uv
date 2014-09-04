@@ -12,7 +12,7 @@ namespace HPHP {
 
     static int on_message_begin(http_parser *_parser){
 //        http_parser_ext *parser = (http_parser_ext *) _parser;
-        echo("message begin\n");
+//        echo("message begin\n");
         return 0;
     }
 
@@ -34,14 +34,16 @@ namespace HPHP {
         parser->obj->o_set("method", StringData::Make(http_method_str((http_method) parser->method)), s_uvhttpparser);
         parser->obj->o_set("headerComplete", true, s_uvhttpparser);
         parser->obj->o_set("keepAlive", !!http_should_keep_alive(parser), s_uvhttpparser);
+        parser->obj->o_set("httpMajor", parser->http_major, s_uvhttpparser);
+        parser->obj->o_set("httpMinor", parser->http_minor, s_uvhttpparser);
         return 0;
     }    
     
     static int on_status(http_parser *_parser, const char *buf, size_t len){
 //        http_parser_ext *parser = (http_parser_ext *) _parser;
-        echo("on status: ");
-        echo(StringData::Make(buf, len, CopyString));
-        echo("\n");        
+//        echo("on status: ");
+//        echo(StringData::Make(buf, len, CopyString));
+//        echo("\n");        
         return 0;
     }    
     
@@ -57,7 +59,6 @@ namespace HPHP {
             if(parsed_url_array->exists(key)){
                 value = (Variant *)&parsed_url_array->rvalAtRef(key);
                 HttpProtocol::DecodeParameters(result, value->asStrRef().data(), value->asStrRef().size());
-                vm_call_user_func("var_dump", make_packed_array(result));
                 parsed_url_array->set(key, result);
             }
             parser->obj->o_set("url", parsed_url, s_uvhttpparser);
@@ -80,8 +81,9 @@ namespace HPHP {
     }    
     
     static int on_body(http_parser *_parser, const char *buf, size_t len){
-//        http_parser_ext *parser = (http_parser_ext *) _parser;
-        echo("on body\n");
+        http_parser_ext *parser = (http_parser_ext *) _parser;
+        parser->obj->o_set("body", StringData::Make(buf, len, CopyString), s_uvhttpparser);
+//        echo("on body\n");
         return 0;
     }
     

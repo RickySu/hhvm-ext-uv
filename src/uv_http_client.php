@@ -4,13 +4,14 @@ class UVHttpClient
     const MAX_HEADER_SIZE = 8192;
     private int $dataSizeInBuffer = 0;
     private bool $closeOnEmpty = false;
+    protected ?array $request;
+    protected bool $isHttpInitialized = false;
+    protected bool $keepAlive = false;
     protected ?UVTcp $client = null;
     protected ?callable $onRead = null;
     protected ?callable $onWrite = null;
     protected ?callable $onError = null;
-    private bool $keepAlive = false;
-    protected ?array<string, string> $http = null;
-    protected ?array<string, string> $responseHeaders = null;
+    private ?UVHttpParser $parser;
     protected ?callable $onRequest = null;
     protected ?mixed $onCustomRead = null;
     protected ?mixed $onCustomWrite = null;
@@ -18,13 +19,10 @@ class UVHttpClient
 
     protected function resetHttpRequest():void
     {
+        $this->parser = new UVHttpParser(UVHttpParser::PARSE_TYPE_REQUEST);
+        $this->request = null;
+        $this->isHttpInitialized = false;
         $this->keepAlive = false;
-        $this->http = [
-            'request' => null,
-            'header' => null,
-            'rawheader' => null,
-            'body' => null,
-        ];
     }
 
     function __construct(UVTcp $client, ?callable $onRequest):void
@@ -39,7 +37,7 @@ class UVHttpClient
 
     public function getRequest(): array<string, string>
     {
-        return $this->http;
+        return $this->request;
     }
 
     public function write(string $data):void
@@ -98,79 +96,26 @@ class UVHttpClient
 
     protected function keepAliveHeader($protocolVersion): array
     {
-        if(isset($this->http['header']['connection']) && strtolower($this->http['header']['connection']) == 'keep-alive' && $protocolVersion == '1.1'){
-            $this->keepAlive = true;
+        if($this->keepAlive && $protocolVersion == '1.1'){
             return ['Connection' => 'keep-alive'];
         }
         return [];
     }
 
-    protected function requestParser(string $rawHeader): ?array<string, string>
+    protected function initializeHttpRequest()
     {
-        $pos = strpos($rawHeader, "\r\n");
-        $line = substr($rawHeader, 0, $pos);
-        $request = explode(' ', $line);
-
-        if(
-            count($request) != 3 ||
-            !in_array($request[0], array('GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'))
-        ){
-            //bad request method
-            $this->close();
-        }
-
-        $pos = strpos($request[1], '?');
-        if($pos === false){
-            $uri = $request[1];
-            $parameters = [];
-        }
-        else{
-            $uri = substr($request[1], 0, $pos);
-            parse_str(substr($request[1], $pos + 1), $parameters);
-        }
-        return [
-            'method' => $request[0],
-            'uri' => $uri,
-            'parameters' => $parameters,
-            'protocol' => $request[2],
+        $this->keepAlive = $this->parser->keepAlive;
+        $this->request = [
+            'request' => [
+                'method' => $this->parser->method,
+                'uri' => $this->parser->url,
+                'protocol' => "{$this->parser->httpMajor}.{$this->parser->httpMinor}",
+            ],
+            'headers' => $this->parser->headers,
+            'body' => $this->parser->body,
         ];
     }
-
-    protected function headerParser(string $rawHeader): ?array<string, string>
-    {
-        $header = null;
-        $headerLines = explode("\r\n", $rawHeader);
-        foreach($headerLines as $line){
-            $pos = strpos($line, ':');
-            if($pos === false) {
-                continue;
-            }
-            $header[strtolower(trim(substr($line, 0, $pos)))] = trim(substr($line, $pos + 2));
-
-        }
-        return $header;
-    }
-
-    protected function initHeader(string $data): bool
-    {
-        $this->http['rawheader'] .= $data;
-        $pos = strpos($this->http['rawheader'], "\r\n\r\n");
-        if($pos === false){
-            if(strlen($this->http['rawheader']) > self::MAX_HEADER_SIZE){
-                $this->close();
-            }
-            return false;
-        }
-        else{
-            $this->http['body'] .= substr($this->http['rawheader'], $pos + 4);
-            $this->http['rawheader'] = substr($this->http['rawheader'], 0, $pos);
-        }
-        $this->http['request'] = $this->requestParser($this->http['rawheader']);
-        $this->http['header'] = $this->headerParser($this->http['rawheader']);
-        unset($this->http['rawheader']);
-        return $this->http['header'] !== null;
-    }
-
+    
     protected function initCallback(): void
     {
         $this->onRead = function(UVTcp $client, string $data)
@@ -179,14 +124,15 @@ class UVHttpClient
                 ($this->onCustomRead)($this, $data);
                 return;
             }
-            if($this->http['header'] === null) {
-                // header uninitialized
-                if($this->initHeader($data)){
+            $this->parser->execute($data);
+            if($this->parser->isMessageComplete()){
+                if(!$this->isHttpInitialized){
+                    $this->isHttpInitialized = true;
+                    $this->initializeHttpRequest();
                     ($this->onRequest)($this);
                 }
                 return;
             }
-            $this->http['body'] .= $data;
         };
 
         $this->onWrite = function(UVTcp $client, int $status, int $sendSize)
