@@ -196,7 +196,7 @@ namespace HPHP {
         req = new write_req_t();
         req->buf.base = new char[data.size()];
         req->buf.len = data.size();
-        memcpy((void *) req->buf.base, data.c_str(), data.size());        
+        memcpy((void *) req->buf.base, data.data(), data.size());        
         return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb);
     }
     

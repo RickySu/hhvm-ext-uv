@@ -200,7 +200,7 @@ namespace HPHP {
         req = new send_req_t();
         req->buf.base = new char[data.size()];
         req->buf.len = data.size();
-        memcpy((void *) req->buf.base, data.c_str(), data.size());
+        memcpy((void *) req->buf.base, data.data(), data.size());
         if((ret = uv_ip4_addr(dest.c_str(), port, &req->addr)) != 0){
             return ret;
         }

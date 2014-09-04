@@ -11,7 +11,7 @@ namespace HPHP {
             Variant key(iter.first());
             String pattern = routes.rvalAt(key).toArray().rvalAt(0).toString();
             int64_t idx = key.toInt64Val();
-            if(r3_tree_insert_routel(n, -1, pattern.c_str(), pattern.size(), (void *) idx) == NULL) {
+            if(r3_tree_insert_routel(n, -1, pattern.data(), pattern.size(), (void *) idx) == NULL) {
                 return idx;
             }
         }
