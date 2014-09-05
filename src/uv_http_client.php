@@ -37,7 +37,7 @@ class UVHttpClient
         $this->resetHttpRequest();
     }
 
-    public function getRequest(): array<string, string>
+    public function getRequest(): array
     {
         return $this->http;
     }
@@ -122,16 +122,16 @@ class UVHttpClient
         $pos = strpos($request[1], '?');
         if($pos === false){
             $uri = $request[1];
-            $parameters = [];
+            $query = [];
         }
         else{
             $uri = substr($request[1], 0, $pos);
-            parse_str(substr($request[1], $pos + 1), $parameters);
+            parse_str(substr($request[1], $pos + 1), $query);
         }
         return [
             'method' => $request[0],
             'uri' => $uri,
-            'parameters' => $parameters,
+            'query' => $query,
             'protocol' => $request[2],
         ];
     }
@@ -151,24 +151,46 @@ class UVHttpClient
         return $header;
     }
 
-    protected function initHeader(string $data): bool
+    protected function initMessage(string $data): void
     {
-        $this->http['rawheader'] .= $data;
-        $pos = strpos($this->http['rawheader'], "\r\n\r\n");
-        if($pos === false){
-            if(strlen($this->http['rawheader']) > self::MAX_HEADER_SIZE){
-                $this->close();
+        if($this->http['header'] === null){
+            $this->http['rawheader'] .= $data;
+            $pos = strpos($this->http['rawheader'], "\r\n\r\n");
+            if($pos === false){
+                if(strlen($this->http['rawheader']) > self::MAX_HEADER_SIZE){
+                    $this->close();
+                }
+                return false;
             }
+            else{
+                $this->http['body'] .= substr($this->http['rawheader'], $pos + 4);
+                $this->http['rawheader'] = substr($this->http['rawheader'], 0, $pos);
+            }
+            $this->http['request'] = $this->requestParser($this->http['rawheader']);
+            $this->http['header'] = $this->headerParser($this->http['rawheader']);
+            unset($this->http['rawheader']);
+            return;
+        }
+        $this->http['body'] .= $data;
+    }
+    
+    protected function isMessageInitialized():bool
+    {
+        if($this->http['header'] === null){
             return false;
         }
-        else{
-            $this->http['body'] .= substr($this->http['rawheader'], $pos + 4);
-            $this->http['rawheader'] = substr($this->http['rawheader'], 0, $pos);
+        if(isset($this->http['header']['content-length'])){
+            if(strlen($this->http['body']) < $this->http['header']['content-length']){
+                return false;
+            }
+            if(strtolower($this->http['header']['content-type']) == 'application/x-www-form-urlencoded'){
+                parse_str($this->http['body'], $this->http['request']['request']);
+                unset($this->http['body']);
+                unset($this->http['header']['content-type']);
+                unset($this->http['header']['content-length']);
+            }
         }
-        $this->http['request'] = $this->requestParser($this->http['rawheader']);
-        $this->http['header'] = $this->headerParser($this->http['rawheader']);
-        unset($this->http['rawheader']);
-        return $this->http['header'] !== null;
+        return true;
     }
 
     protected function initCallback(): void
@@ -179,14 +201,10 @@ class UVHttpClient
                 ($this->onCustomRead)($this, $data);
                 return;
             }
-            if($this->http['header'] === null) {
-                // header uninitialized
-                if($this->initHeader($data)){
-                    ($this->onRequest)($this);
-                }
-                return;
+            $this->initMessage($data);
+            if($this->isMessageInitialized()){
+                ($this->onRequest)($this);
             }
-            $this->http['body'] .= $data;
         };
 
         $this->onWrite = function(UVTcp $client, int $status, int $sendSize)
