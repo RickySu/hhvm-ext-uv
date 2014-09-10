@@ -10,7 +10,8 @@ namespace HPHP
         s_uvudp("UVUdp"),
         s_uvresolver("UVResolver"),
         s_uvtimer("UVTimer"),
-        s_uvhttpserver("UVHttpServer")
+        s_uvhttpserver("UVHttpServer"),
+        s_uvssl("UVSSL")
     ;
 }
 #endif	/* COMMON_H */

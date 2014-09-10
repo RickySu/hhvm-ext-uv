@@ -19,10 +19,24 @@ class UVHttpServer
     <<__Native>>private function _R3RoutesAdd(array $routes):mixed;
     <<__Native>>private function _R3Match(string $uri, int $method):array;
 
-    function start():void{
+    function setSocket(UVTcp $socket):void
+    {
+        $this->server = $socket;
+    }
+    
+    protected function getServer():UVTcp
+    {
+        if($this->server === null){
+            $this->server = new UVTcp();
+        }
+        return $this->server;
+    }
+    
+    function start():void
+    {
         $this->_R3RoutesAdd($this->routes);
-        $this->server = new UVTcp();
-        $this->server->listen($this->host, $this->port, function($server){
+        $server = $this->getServer();
+        $server->listen($this->host, $this->port, function($server){
             new UVHttpSocket($server->accept(), function(UVHttpSocket $client) {
                 if($this->routes){
                     $result = $this->_R3Match($client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));

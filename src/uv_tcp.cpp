@@ -1,26 +1,8 @@
 #include "ext.h"
 #include "hphp/runtime/base/thread-init-fini.h"
-#define UV_TCP_HANDLE_INTERNAL_REF 1
-#define UV_TCP_HANDLE_START (1<<1)
-#define UV_TCP_READ_START (1<<2)
-//#define UV_TCP_CLIENT_CONNECT_START (1<<3)
+#include "uv_tcp.h"
 
 namespace HPHP {
-
-    typedef struct uv_tcp_ext_s:public uv_tcp_t{
-        uint flag;
-        uv_connect_t connect_req;
-        uv_shutdown_t shutdown_req;
-        ObjectData *tcp_object_data;
-        StringData *sockAddr;
-        StringData *peerAddr;
-        int sockPort;
-        int peerPort;
-    } uv_tcp_ext_t;
-    
-    typedef struct write_req_s: public uv_write_t {
-        uv_buf_t buf;
-    } write_req_t;
 
     ALWAYS_INLINE void releaseHandle(uv_tcp_ext_t *handle) {
         if(handle->flag & UV_TCP_READ_START){
@@ -60,6 +42,7 @@ namespace HPHP {
         tcp_handle->sockAddr = tcp_handle->peerAddr = NULL;
         tcp_handle->sockPort = tcp_handle->peerPort = -1;                                
         tcp_handle->tcp_object_data = object.get();
+        tcp_handle->custom_data = NULL;
         uv_tcp_init(loop, tcp_handle);
         return tcp_handle;
     }    
@@ -123,17 +106,17 @@ namespace HPHP {
         }
     }
             
-    static void HHVM_METHOD(UVTcp, __construct) {
+    void HHVM_METHOD(UVTcp, __construct) {
         initUVTcpObject(this_, uv_default_loop());
     }
     
-    static void HHVM_METHOD(UVTcp, __destruct) {
+    void HHVM_METHOD(UVTcp, __destruct) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
         releaseHandle(tcp_handle);    
     }
     
-    static int64_t HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
+    int64_t HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
         int64_t ret;
         struct sockaddr_in addr;
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
@@ -157,17 +140,21 @@ namespace HPHP {
     }
     
     static Object HHVM_METHOD(UVTcp, accept) {
-        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        return make_accepted_uv_tcp_object(this_, "UVTcp");
+    }
+    
+    Object make_accepted_uv_tcp_object(const Object &obj, const String &class_name) {
+        TcpResourceData *resource_data = FETCH_RESOURCE(obj, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *server_tcp_handle, *client_tcp_handle;
         server_tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
-        Object client = makeObject("UVTcp", false);
+        Object client = makeObject(class_name, false);
         client_tcp_handle = initUVTcpObject(client, server_tcp_handle->loop);
         if(uv_accept((uv_stream_t *) server_tcp_handle, (uv_stream_t *) client_tcp_handle)) {
             return NULL;
         }
         client.get()->incRefCount();
         client_tcp_handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
-        return client;
+        return client;    
     }
     
     static void HHVM_METHOD(UVTcp, close) {

@@ -9,14 +9,19 @@
 
 #define TIMEVAL_TO_DOUBLE(tv) (tv.tv_sec + tv.tv_usec * 1e-6)
 
-#define FETCH_RESOURCE(obj, resource_class, ctx) ({\
-    auto __var__get = obj->o_get(s_internal_resource, false, ctx); \
+#define FETCH_RESOURCE_EXT(obj, resource_class, ctx, rs) ({\
+    auto __var__get = obj->o_get(rs, false, ctx); \
     if(__var__get.isNull()) raise_error("resource is invalid."); \
     __var__get.asCResRef().getTyped<resource_class>(); \
     })
- #define SET_RESOURCE(obj, resource, ctx) \
-    obj->o_set(s_internal_resource, resource, ctx);
 
+#define FETCH_RESOURCE(obj, resource_class, ctx) FETCH_RESOURCE_EXT(obj, resource_class, ctx, s_internal_resource)
+    
+#define SET_RESOURCE_EXT(obj, resource, ctx, rs) \
+    obj->o_set(rs, resource, ctx)
+
+#define SET_RESOURCE(obj, resource, ctx) SET_RESOURCE_EXT(obj, resource, ctx, s_internal_resource)
+    
 namespace HPHP
 {
 
