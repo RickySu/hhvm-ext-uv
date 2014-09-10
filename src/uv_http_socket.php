@@ -1,5 +1,5 @@
 <?hh
-class UVHttpClient
+class UVHttpSocket
 {
     const MAX_HEADER_SIZE = 8192;
     private int $dataSizeInBuffer = 0;

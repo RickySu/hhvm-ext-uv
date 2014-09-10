@@ -37,10 +37,10 @@ Example
 // Simple Web Server
 $server = new UVHttpServer('127.0.0.1', 8080);
 $server
-->onRequest('/post/{id:\\d+}/{foo}', function(UVHttpClient $client, $id, $foo){
+->onRequest('/post/{id:\\d+}/{foo}', function(UVHttpSocket $client, $id, $foo){
     $client->sendReply("match /post/$id/$foo");
 })
-->onDefaultRequest(function(UVHttpClient $client){
+->onDefaultRequest(function(UVHttpSocket $client){
     $client->sendReply("hello world");
 })
 ->start();
@@ -68,7 +68,7 @@ UVLoop::defaultLoop()->run();
 
 ## benchmark
 
-[benchmark](https://gist.github.com/RickySu/8edb9bcc58829e5478ac)
+[simple http server benchmark](https://gist.github.com/RickySu/8edb9bcc58829e5478ac)
 
 ## LICENSE
 

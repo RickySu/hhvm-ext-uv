@@ -23,7 +23,7 @@ class UVHttpServer
         $this->_R3RoutesAdd($this->routes);
         $this->server = new UVTcp();
         $this->server->listen($this->host, $this->port, function($server){
-            new UVHttpClient($server->accept(), function(UVHttpClient $client) {
+            new UVHttpSocket($server->accept(), function(UVHttpSocket $client) {
                 if($this->routes){
                     $result = $this->_R3Match($client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));
                     if($result){
@@ -43,9 +43,8 @@ class UVHttpServer
 
     function __construct(string $host, int $port): void
     {
-        $this->defaultCallback = function(UVHttpCLient $client){
+        $this->defaultCallback = function(UVHttpSocket $client){
             $client->sendReply('Page not found.', 404);
-            $client->setCloseOnBufferEmpty();
         };
         $this->host = $host;
         $this->port = $port;
