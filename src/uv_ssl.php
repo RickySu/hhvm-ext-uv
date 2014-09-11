@@ -1,6 +1,7 @@
 <?hh
 class UVSSL extends UVTcp
 {   
+    const SSL_HANDSHAKE_FINISH = 99999;
     <<__Native>> function __construct():void;     
     <<__Native>> function __destruct():void;
     <<__Native>> function accept(): UVSSL;
