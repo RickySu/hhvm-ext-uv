@@ -8,7 +8,8 @@ class UVSSL extends UVTcp
     <<__Native>> function __destruct():void;
     <<__Native>> function listen(string $host, int $port, mixed $onConnectCallback):int;
     <<__Native>> function accept(): UVSSL;
-    
+    <<__Native>> function setCallback(mixed $onRead, mixed $onWrite, mixed $onError):int;
+    <<__Native>> function write(string $buf): int;        
     public function setCertFile(string $certFile):void
     {
         $this->certFile = $certFile;

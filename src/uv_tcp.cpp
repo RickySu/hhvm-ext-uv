@@ -50,8 +50,9 @@ namespace HPHP {
     static void write_cb(uv_write_t *wr, int status) {      
         write_req_t *req = (write_req_t *) wr;
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();        
         Variant callback = tcp_resource_data->getWriteCallback();
-        if(!callback.isNull()){
+        if((tcp_handle->flag & UV_TCP_WRITE_CALLBACK_ENABLE) && !callback.isNull()){
             vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status, req->buf.len));
         }
         delete req->buf.base;
@@ -65,20 +66,22 @@ namespace HPHP {
 
     static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
         TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) stream)->tcp_object_data, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
         if(nread > 0){
             if(!tcp_resource_data->getReadCallback().isNull()){
                 vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
             }
         }
-        else{
+        else if(nread < 0){
             if(!tcp_resource_data->getErrorCallback().isNull()){
                 vm_call_user_func(tcp_resource_data->getErrorCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, nread));
             }
+            tcp_close_socket(tcp_handle);
         }
         delete buf->base;
     }
     
-    static void close_cb(uv_handle_t* handle) {
+    void tcp_close_cb(uv_handle_t* handle) {
        releaseHandle((uv_tcp_ext_t *) handle);    
     }
     
@@ -160,18 +163,20 @@ namespace HPHP {
     static void HHVM_METHOD(UVTcp, close) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
-        uv_close((uv_handle_t *) tcp_handle, close_cb);
+        tcp_close_socket(tcp_handle);
     }
     
     static int64_t HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
         int64_t ret;
-        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        TcpResourceData *resource_data = 
+        FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) 
+        resource_data->getInternalResourceData();
         if((ret = uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb)) == 0){
             resource_data->setReadCallback(onReadCallback);
             resource_data->setWriteCallback(onWriteCallback);
             resource_data->setErrorCallback(onErrorCallback);
-            tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
+            tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START|UV_TCP_WRITE_CALLBACK_ENABLE);
         }
         return ret;
     }
@@ -179,12 +184,16 @@ namespace HPHP {
     static int64_t HHVM_METHOD(UVTcp, write, const String &data) {
         TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        return tcp_write_raw((uv_stream_t *) tcp_handle, data.data(), data.size());
+    }
+    
+    int64_t tcp_write_raw(uv_stream_t * handle, const char *data, int64_t size) {
         write_req_t *req;
         req = new write_req_t();
-        req->buf.base = new char[data.size()];
-        req->buf.len = data.size();
-        memcpy((void *) req->buf.base, data.c_str(), data.size());        
-        return uv_write((uv_write_t *) req, (uv_stream_t *) tcp_handle, &req->buf, 1, write_cb);
+        req->buf.base = new char[size];
+        req->buf.len = size;
+        memcpy((void *) req->buf.base, data, size);
+        return uv_write((uv_write_t *) req, handle, &req->buf, 1, write_cb);    
     }
     
     static String HHVM_METHOD(UVTcp, getSockname) {
