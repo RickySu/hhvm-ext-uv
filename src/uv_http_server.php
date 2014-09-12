@@ -10,7 +10,7 @@ class UVHttpServer
     const METHOD_OPTIONS = 128;
 
     private ?resource $_rs = null;
-    private ?UVTcp $server = null;
+    private ?UVTcp $socket = null;
     protected array $routes = [];
     protected ?mixed $defaultCallback = null;
     protected ?string $host;
@@ -21,22 +21,22 @@ class UVHttpServer
 
     function setSocket(UVTcp $socket):void
     {
-        $this->server = $socket;
+        $this->socket = $socket;
     }
     
-    protected function getServer():UVTcp
+    protected function getSocket():UVTcp
     {
-        if($this->server === null){
-            $this->server = new UVTcp();
+        if($this->socket === null){
+            $this->socket = new UVTcp();
         }
-        return $this->server;
+        return $this->socket;
     }
     
     function start():void
     {
         $this->_R3RoutesAdd($this->routes);
-        $server = $this->getServer();
-        $server->listen($this->host, $this->port, function($server){
+        $socket = $this->getSocket();
+        $socket->listen($this->host, $this->port, function($server){
             new UVHttpSocket($server->accept(), function(UVHttpSocket $client) {
                 if($this->routes){
                     $result = $this->_R3Match($client->getRequest()['request']['uri'], $this->convertMethod([$client->getRequest()['request']['method']]));
@@ -55,7 +55,7 @@ class UVHttpServer
         });
     }
 
-    function __construct(string $host, int $port): void
+    function __construct(string $host = '127.0.0.1', int $port = 80): void
     {
         $this->defaultCallback = function(UVHttpSocket $client){
             $client->sendReply('Page not found.', 404);

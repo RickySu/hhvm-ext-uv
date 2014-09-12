@@ -9,7 +9,7 @@
     #define check_ssl_support() raise_error("please recompile hhvm libuv extension with opeensl support.")
 #endif
 
-#define SSL_HANDSHAKE_FINISH 99999
+#define SSL_HANDSHAKE_FINISH -99999
 
 typedef struct {
     SSL_CTX* ctx;
@@ -70,7 +70,7 @@ namespace HPHP {
                 }
                 else{
                     if(!tcp_resource_data->getReadCallback().isNull()){                            
-                        vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, SSL_HANDSHAKE_FINISH));
+                        vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, "", SSL_HANDSHAKE_FINISH));
                     }                
                 }
                 return;
@@ -78,7 +78,7 @@ namespace HPHP {
             tcp_handle->flag |= UV_TCP_WRITE_CALLBACK_ENABLE;
             size = SSL_read(ssl->ssl, read_buf, sizeof(read_buf));
             if(size > 0 && !tcp_resource_data->getReadCallback().isNull()) {
-                vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(read_buf, size, CopyString)));
+                vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(read_buf, size, CopyString), size));
             }
         }
         else if(nread<0){

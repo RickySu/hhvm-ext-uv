@@ -69,7 +69,7 @@ namespace HPHP {
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
         if(nread > 0){
             if(!tcp_resource_data->getReadCallback().isNull()){
-                vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
+                vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(buf->base, nread, CopyString), nread));
             }
         }
         else if(nread < 0){
