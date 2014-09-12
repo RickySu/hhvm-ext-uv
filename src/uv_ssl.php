@@ -10,4 +10,5 @@ class UVSSL extends UVTcp
     <<__Native>> function setCertFile(string $certFile):bool;
     <<__Native>> function setCertChainFile(string $certChainFile):bool;
     <<__Native>> function setPrivateKeyFile(string $privateKeyFile):bool;
+    <<__Native>> function connect(string $host, int $port, mixed $onConnectCallback):int;
 }

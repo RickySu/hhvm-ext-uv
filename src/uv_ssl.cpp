@@ -77,7 +77,7 @@ namespace HPHP {
             }
             tcp_handle->flag |= UV_TCP_WRITE_CALLBACK_ENABLE;
             size = SSL_read(ssl->ssl, read_buf, sizeof(read_buf));
-            if(size > 0 && !tcp_resource_data->getReadCallback().isNull()){                            
+            if(size > 0 && !tcp_resource_data->getReadCallback().isNull()) {
                 vm_call_user_func(tcp_resource_data->getReadCallback(), make_packed_array(((uv_tcp_ext_t *) stream)->tcp_object_data, StringData::Make(read_buf, size, CopyString)));
             }
         }
@@ -104,7 +104,7 @@ namespace HPHP {
         HHVM_MN(UVTcp, __construct)(this_);
         initSSL(this_);
         ssl = fetchSSLResource(this_);
-        ssl->ctx = SSL_CTX_new(SSLv23_method());            
+        ssl->ctx = SSL_CTX_new(SSLv23_method());
     }
     
     static void HHVM_METHOD(UVSSL, __destruct){
@@ -158,7 +158,8 @@ namespace HPHP {
         ssl->write_bio = BIO_new(BIO_s_mem());        
         SSL_set_bio(ssl->ssl, ssl->read_bio, ssl->write_bio);
         SSL_set_accept_state(ssl->ssl);
-        tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);        
+        write_bio_to_socket(tcp_handle);
+        tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         return obj;
     }
 
@@ -182,6 +183,42 @@ namespace HPHP {
         }
         return 0;
     }
+
+    static void client_connection_cb(uv_connect_t* req, int status) {
+        TcpResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();        
+        ssl_ext_t *ssl = (ssl_ext_t *) tcp_handle->custom_data;
+        Variant callback = tcp_resource_data->getConnectCallback();        
+        uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb);
+        ssl->ssl = SSL_new(ssl->ctx);
+        ssl->read_bio = BIO_new(BIO_s_mem());
+        ssl->write_bio = BIO_new(BIO_s_mem());        
+        SSL_set_bio(ssl->ssl, ssl->read_bio, ssl->write_bio);
+        SSL_set_connect_state(ssl->ssl);
+        SSL_connect(ssl->ssl);
+        write_bio_to_socket(tcp_handle);
+        if(!callback.isNull()){
+            vm_call_user_func(callback, make_packed_array(((uv_tcp_ext_t *) req->handle)->tcp_object_data, status));
+        }    
+    }   
+    
+    static int64_t HHVM_METHOD(UVSSL, connect, const String &host, int64_t port, const Variant &onConnectCallback) {
+        int64_t ret;
+        struct sockaddr_in addr;
+        TcpResourceData *resource_data = FETCH_RESOURCE(this_, TcpResourceData, s_uvtcp);
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
+        
+        if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
+            return ret;
+        }
+        if((ret = uv_tcp_connect(&tcp_handle->connect_req, (uv_tcp_t *) tcp_handle, (const struct sockaddr*) &addr, client_connection_cb)) != 0){
+            return ret;
+        }
+        
+        resource_data->setConnectCallback(onConnectCallback);        
+        tcp_handle->flag |= UV_TCP_HANDLE_START;
+        return ret;
+    }
     
     void uvExtension::_initUVSSLClass() {
         HHVM_ME(UVSSL, accept);
@@ -191,6 +228,7 @@ namespace HPHP {
         HHVM_ME(UVSSL, __destruct);
         HHVM_ME(UVSSL, setCertFile);
         HHVM_ME(UVSSL, setCertChainFile);
-        HHVM_ME(UVSSL, setPrivateKeyFile);                        
+        HHVM_ME(UVSSL, setPrivateKeyFile);
+        HHVM_ME(UVSSL, connect);
     }
 }
