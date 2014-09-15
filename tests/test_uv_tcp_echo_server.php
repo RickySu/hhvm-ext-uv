@@ -32,7 +32,7 @@ $server = new UVTcp();
 $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
     $client = $server->accept();
-    $client->setCallback(function($client, $recv, $status) use($server){
+    $client->setCallback(function($client, $recv) use($server){
         $client->write($recv);    
         if($recv == '!close!'){            
             $server->close();

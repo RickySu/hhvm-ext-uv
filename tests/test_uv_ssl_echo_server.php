@@ -34,14 +34,13 @@ $server->setPrivateKeyFile(__DIR__."/cert/server.key");
 $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
     $client = $server->accept();
-    $client->setCallback(function($client, $recv, $status) use($server){
-        if($status === UVSSL::SSL_HANDSHAKE_FINISH){
-            if($server->clientCloseTriggered){
-                $client->write("client closed");
-                $server->clientCloseTriggered = false;
-            }
-            return;
-        }
+    $client->setSSLHandshakeCallback(function($client) use($server){
+        if($server->clientCloseTriggered){
+            $client->write("client closed");
+            $server->clientCloseTriggered = false;
+        }    
+    });
+    $client->setCallback(function($client, $recv) use($server){
         $client->write($recv);    
         if($recv == '!close!'){
             $server->close();

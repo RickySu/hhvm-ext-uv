@@ -12,7 +12,7 @@ namespace HPHP {
     
     InternalResourceData::InternalResourceData(unsigned size) {
         resource = (void *) new char[size];
-
+        memset(resource, '\0', size);        
     }
 
     InternalResourceData::~InternalResourceData() {

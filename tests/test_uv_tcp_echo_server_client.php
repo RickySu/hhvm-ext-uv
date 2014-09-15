@@ -23,7 +23,7 @@ $randomValue = md5(rand().microtime());
 
 $client->connect($host, $port, function($client, $status) use($randomValue){
     Equal(0, $status, "on connect");
-    $client->setCallback(function($client, $recv, $status) use($randomValue){
+    $client->setCallback(function($client, $recv) use($randomValue){
         Equal("resp $randomValue", $recv, "on read");
     }, function($client, $status){
         Equal(0, $status, "on write");

@@ -195,11 +195,8 @@ class UVHttpSocket
 
     protected function initCallback(): void
     {
-        $this->onRead = function(UVTcp $client, string $data, int $status)
+        $this->onRead = function(UVTcp $client, string $data)
         {
-            if($status < 0){
-                return;
-            }
             
             if($this->onCustomRead !== null){
                 ($this->onCustomRead)($this, $data);
