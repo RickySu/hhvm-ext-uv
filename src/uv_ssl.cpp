@@ -34,7 +34,6 @@ namespace HPHP {
     }
 
     int64_t write_bio_to_socket(uv_ssl_ext_t *ssl_handle){
-//        ssl_ext_t *ssl = (ssl_ext_t *)ssl_handle->;
         char buf[1024];
         int hasread, ret;
         while(true){
@@ -50,9 +49,7 @@ namespace HPHP {
         return ret;
     }    
 
-    static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_ssl_ext_t *) stream)->tcp_object_data, InternalResourceData, s_uvssl);
-        uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) tcp_resource_data->getInternalResourceData();
+    static void read_cb(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf) {
         auto readCallback = ssl_handle->tcp_object_data->o_get("readCallback", false, s_uvssl);
         auto errorCallback = ssl_handle->tcp_object_data->o_get("errorCallback", false, s_uvssl);
         auto sslHandshakeCallback = ssl_handle->tcp_object_data->o_get("sslHandshakeCallback", false, s_uvssl);        
@@ -141,7 +138,7 @@ namespace HPHP {
         Object obj = make_accepted_uv_tcp_object(this_, "UVSSL", sizeof(uv_ssl_ext_t));
         InternalResourceData *resource_data = FETCH_RESOURCE(obj, InternalResourceData, s_uvssl);
         uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) resource_data->getInternalResourceData();
-        uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, read_cb);
+        uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
         server_ssl = fetchSSLResource(this_);                
         ssl = fetchSSLResource(obj);
         ssl->ssl = SSL_new(server_ssl->ctx);
@@ -175,11 +172,10 @@ namespace HPHP {
     }
 
     static void client_connection_cb(uv_connect_t* req, int status) {
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_ssl_ext_t *) req->handle)->tcp_object_data, InternalResourceData, s_uvssl);
-        uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) tcp_resource_data->getInternalResourceData();                
+        uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) req->handle;
         ssl_ext_t *ssl = &ssl_handle->ssl;
         auto callback = ssl_handle->tcp_object_data->o_get("connectCallback", false, s_uvssl);
-        uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, read_cb);
+        uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
         ssl->ssl = SSL_new(ssl->ctx);
         ssl->read_bio = BIO_new(BIO_s_mem());
         ssl->write_bio = BIO_new(BIO_s_mem());        

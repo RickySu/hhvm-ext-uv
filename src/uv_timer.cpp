@@ -9,8 +9,8 @@ namespace HPHP {
     } uv_timer_ext_t;
     
     static void timer_handle_callback(uv_timer_ext_t *timer_handle) {
-        CallbackResourceData *timer_resource_data = FETCH_RESOURCE(((uv_timer_ext_t *) timer_handle)->timer_object_data, CallbackResourceData, s_uvtimer);
-        vm_call_user_func(timer_resource_data->getCallback(), make_packed_array(((uv_timer_ext_t *) timer_handle)->timer_object_data));
+        auto callback = timer_handle->timer_object_data->o_get("callback", false, s_uvtimer);        
+        vm_call_user_func(callback, make_packed_array(timer_handle->timer_object_data));
     }
     
     ALWAYS_INLINE void releaseHandle(uv_timer_ext_t *handle) {
@@ -32,11 +32,11 @@ namespace HPHP {
     static int64_t HHVM_METHOD(UVTimer, start, const Variant &timer_cb, int64_t start, int64_t repeat) {
         CallbackResourceData *resource_data = FETCH_RESOURCE(this_, CallbackResourceData, s_uvtimer);
         uv_timer_ext_t *timer_handle = (uv_timer_ext_t *) resource_data->getInternalResourceData();
-        resource_data->setCallback(timer_cb);
+        this_->o_set("callback", timer_cb, s_uvtimer);
         int64_t ret = uv_timer_start(timer_handle, (uv_timer_cb) timer_handle_callback, start, repeat);
         if(ret == 0){
             timer_handle->start = true;
-            timer_handle->timer_object_data = getThisOjectData(this_);
+            timer_handle->timer_object_data = getThisOjectData(this_);            
             timer_handle->timer_object_data->incRefCount();
         }
         return ret;

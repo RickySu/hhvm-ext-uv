@@ -4,7 +4,7 @@
 namespace HPHP {
 
     typedef struct uv_signal_ext_s:public uv_signal_t{
-        bool start = false;
+        bool start;
         ObjectData *signal_object_data;        
     } uv_signal_ext_t;
     
@@ -18,8 +18,8 @@ namespace HPHP {
         SET_RESOURCE(this_, resource, s_uvsignal);
         InternalResourceData *signal_resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvsignal);
         uv_signal_ext_t *signal_handle = (uv_signal_ext_t*) signal_resource_data->getInternalResourceData();
-        signal_handle->signal_object_data = getThisOjectData(this_);
         uv_signal_init(uv_default_loop(), signal_handle);
+        signal_handle->start = false;
     }
     
     static int64_t HHVM_METHOD(UVSignal, start, const Variant &signal_cb, int64_t signo) {
@@ -29,6 +29,7 @@ namespace HPHP {
         signal_handle->start = true;
         int64_t ret = uv_signal_start(signal_handle, (uv_signal_cb) signal_handle_callback, signo);
         if(ret == 0){
+            signal_handle->signal_object_data = getThisOjectData(this_);        
             getThisOjectData(this_)->incRefCount();
         }
         return ret;

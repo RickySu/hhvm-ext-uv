@@ -45,8 +45,7 @@ namespace HPHP {
 
     static void write_cb(uv_write_t *wr, int status) {      
         write_req_t *req = (write_req_t *) wr;
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, InternalResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();        
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto callback = tcp_handle->tcp_object_data->o_get("writeCallback", false, s_uvtcp);
         if((tcp_handle->flag & UV_TCP_WRITE_CALLBACK_ENABLE) && !callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status, req->buf.len));
@@ -60,9 +59,7 @@ namespace HPHP {
         buf->len = suggested_size;
     }
 
-    static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) stream)->tcp_object_data, InternalResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
+    static void read_cb(uv_tcp_ext_t *tcp_handle, ssize_t nread, const uv_buf_t* buf) {
         auto readCallback = tcp_handle->tcp_object_data->o_get("readCallback", false, s_uvtcp);
         auto errorCallback = tcp_handle->tcp_object_data->o_get("errorCallback", false, s_uvtcp);        
         if(nread > 0){
@@ -84,8 +81,7 @@ namespace HPHP {
     }
     
     static void client_connection_cb(uv_connect_t* req, int status) {
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, InternalResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto callback = tcp_handle->tcp_object_data->o_get("connectCallback", false, s_uvtcp);
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status));
@@ -93,17 +89,14 @@ namespace HPHP {
     }
     
     static void shutdown_cb(uv_shutdown_t* req, int status) {
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) req->handle)->tcp_object_data, InternalResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();        
+        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto callback = tcp_handle->tcp_object_data->o_get("shutdownCallback", false, s_uvtcp);
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status));
         }
     }    
     
-    static void connection_cb(uv_stream_t* server, int status) {
-        InternalResourceData *tcp_resource_data = FETCH_RESOURCE(((uv_tcp_ext_t *) server)->tcp_object_data, InternalResourceData, s_uvtcp);
-        uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();        
+    static void connection_cb(uv_tcp_ext_t *tcp_handle, int status) {
         auto callback = tcp_handle->tcp_object_data->o_get("connectCallback", false, s_uvtcp);
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status));
@@ -134,7 +127,7 @@ namespace HPHP {
             return ret;
         }
         
-        if((ret = uv_listen((uv_stream_t *) tcp_handle, SOMAXCONN, connection_cb)) != 0){
+        if((ret = uv_listen((uv_stream_t *) tcp_handle, SOMAXCONN, (uv_connection_cb) connection_cb)) != 0){
             return ret;
         }
         
@@ -174,7 +167,7 @@ namespace HPHP {
         FETCH_RESOURCE(this_, InternalResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) 
         resource_data->getInternalResourceData();
-        if((ret = uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, read_cb)) == 0){
+        if((ret = uv_read_start((uv_stream_t *) tcp_handle, alloc_cb, (uv_read_cb) read_cb)) == 0){
             this_->o_set("readCallback", onReadCallback, s_uvtcp);
             this_->o_set("writeCallback", onWriteCallback, s_uvtcp);
             this_->o_set("errorCallback", onErrorCallback, s_uvtcp);            
