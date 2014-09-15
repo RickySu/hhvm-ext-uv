@@ -19,7 +19,6 @@ set(LIBUV_LIBRARIES ${LIBUV_LIB}/libuv.a ${R3_LIB}/libr3.a)
 HHVM_EXTENSION(uv
     src/resource/InternalResourceData.cpp
     src/resource/CallbackResourceData.cpp
-    src/resource/TcpResourceData.cpp
     src/resource/UdpResourceData.cpp
     src/resource/ResolverResourceData.cpp
     src/resource/R3ResourceData.cpp

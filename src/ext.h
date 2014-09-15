@@ -6,7 +6,6 @@
 #include "hphp/runtime/vm/jit/translator-inline.h"
 #include "resource/InternalResourceData.h"
 #include "resource/CallbackResourceData.h"
-#include "resource/TcpResourceData.h"
 #include "resource/UdpResourceData.h"
 #include "resource/ResolverResourceData.h"
 #include "resource/R3ResourceData.h"
