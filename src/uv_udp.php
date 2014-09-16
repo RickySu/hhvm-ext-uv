@@ -2,6 +2,10 @@
 class UVUdp
 {
     private ?resource $_rs = null;
+    protected ?callback $recvCallback;
+    protected ?callback $sendCallback;
+    protected ?callback $errorCallback;
+    
     <<__Native>> function __construct():void;
     <<__Native>> function __destruct():void;
     <<__Native>> function bind(string $host, int $port):bool;

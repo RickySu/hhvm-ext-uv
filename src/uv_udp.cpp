@@ -36,21 +36,18 @@ namespace HPHP {
             ((uv_udp_ext_t *) handle)->udp_object_data->decRefAndRelease();
         }
         
-        if(handle->sockPort != -1){
-            handle->sockPort = -1;
+        if(handle->sockPort != 0){
+            handle->sockPort = 0;
             handle->sockAddr->decRefAndRelease();
             handle->sockAddr = NULL;
         }
     }
     
     ALWAYS_INLINE uv_udp_ext_t *initUVUdpObject(const Object &object, uv_loop_t *loop) {
-        Resource resource(NEWOBJ(UdpResourceData(sizeof(uv_udp_ext_t))));
+        Resource resource(NEWOBJ(InternalResourceData(sizeof(uv_udp_ext_t))));
         SET_RESOURCE(object, resource, s_uvudp);
-        UdpResourceData *udp_resource_data = FETCH_RESOURCE(object, UdpResourceData, s_uvudp);
+        InternalResourceData *udp_resource_data = FETCH_RESOURCE(object, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) udp_resource_data->getInternalResourceData();
-        udp_handle->flag = 0;
-        udp_handle->sockAddr = NULL;
-        udp_handle->sockPort = -1;                                
         udp_handle->udp_object_data = object.get();
         uv_udp_init(loop, udp_handle);
         return udp_handle;
@@ -58,12 +55,12 @@ namespace HPHP {
 
     static void send_cb(uv_udp_send_t* sr, int status) {
         send_req_t *req = (send_req_t *) sr;
-        UdpResourceData *udp_resource_data = FETCH_RESOURCE(((uv_udp_ext_t *) req->handle)->udp_object_data, UdpResourceData, s_uvudp);
-        Variant callback = udp_resource_data->getSendCallback();        
+        uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) req->handle;
+        auto callback = udp_handle->udp_object_data->o_get("sendCallback", false, s_uvudp);
         if(!callback.isNull()){
             vm_call_user_func(callback, 
                 make_packed_array(
-                    ((uv_udp_ext_t *) req->handle)->udp_object_data,
+                    udp_handle->udp_object_data,
                     sock_addr((struct sockaddr *) &req->addr),
                     sock_port((struct sockaddr *) &req->addr),
                     status
@@ -79,14 +76,14 @@ namespace HPHP {
         buf->len = suggested_size;
     }
 
-    static void recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned int flags) {
-        UdpResourceData *udp_resource_data = FETCH_RESOURCE(((uv_udp_ext_t *) handle)->udp_object_data, UdpResourceData, s_uvudp);
-        
+    static void recv_cb(uv_udp_ext_t* udp_handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned int flags) {
+        auto recvCallback = udp_handle->udp_object_data->o_get("recvCallback", false, s_uvudp);
+        auto errorCallback = udp_handle->udp_object_data->o_get("errorCallback", false, s_uvudp);        
         if(nread > 0){
-            if(!udp_resource_data->getRecvCallback().isNull()){
-                vm_call_user_func(udp_resource_data->getRecvCallback(), 
+            if(!recvCallback.isNull()){
+                vm_call_user_func(recvCallback, 
                     make_packed_array(
-                        ((uv_udp_ext_t *) handle)->udp_object_data,
+                        udp_handle->udp_object_data,
                         sock_addr((struct sockaddr *) addr),
                         sock_port((struct sockaddr *) addr),
                         StringData::Make(buf->base, nread, CopyString),
@@ -96,8 +93,8 @@ namespace HPHP {
             }
         }
         else{
-            if(!udp_resource_data->getErrorCallback().isNull()){
-                vm_call_user_func(udp_resource_data->getErrorCallback(), make_packed_array(((uv_udp_ext_t *) handle)->udp_object_data, nread, (int64_t) flags));
+            if(!errorCallback.isNull()){
+                vm_call_user_func(errorCallback, make_packed_array(udp_handle->udp_object_data, nread, (int64_t) flags));
             }
         }
         delete buf->base;
@@ -112,7 +109,7 @@ namespace HPHP {
     }
     
     static void HHVM_METHOD(UVUdp, __destruct) {
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();
         releaseHandle(udp_handle);    
     }
@@ -120,7 +117,7 @@ namespace HPHP {
     static int64_t HHVM_METHOD(UVUdp, bind, const String &host, int64_t port) {
         int64_t ret;        
         struct sockaddr_in addr; 
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
         
         if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
@@ -136,19 +133,19 @@ namespace HPHP {
     }
     
     static void HHVM_METHOD(UVUdp, close) {
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();
         uv_close((uv_handle_t *) udp_handle, close_cb);
     }
         
    static int64_t HHVM_METHOD(UVUdp, setCallback, const Variant &onRecvCallback, const Variant &onSendCallback, const Variant &onErrorCallback) {
         int64_t ret;
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
-        if((ret = uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, recv_cb)) == 0) {
-            resource_data->setRecvCallback(onRecvCallback);
-            resource_data->setSendCallback(onSendCallback);
-            resource_data->setErrorCallback(onErrorCallback);
+        if((ret = uv_udp_recv_start((uv_udp_t *) udp_handle, alloc_cb, (uv_udp_recv_cb) recv_cb)) == 0) {
+            this_->o_set("recvCallback", onRecvCallback, s_uvudp);
+            this_->o_set("sendCallback", onSendCallback, s_uvudp);
+            this_->o_set("errorCallback", onErrorCallback, s_uvudp);
             udp_handle->flag |= (UV_UDP_HANDLE_START|UV_UDP_READ_START);
         }
         return ret;
@@ -157,10 +154,10 @@ namespace HPHP {
     static String HHVM_METHOD(UVUdp, getSockname) {
         struct sockaddr addr;
         int addrlen;
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();
         
-        if(udp_handle->sockPort == -1){
+        if(udp_handle->sockPort == 0){
             addrlen = sizeof addr;
             if(uv_udp_getsockname(udp_handle, &addr, &addrlen)){
                 return String();
@@ -176,10 +173,10 @@ namespace HPHP {
     static int64_t HHVM_METHOD(UVUdp, getSockport) {
         struct sockaddr addr;
         int addrlen;
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();
 
-        if(udp_handle->sockPort == -1){
+        if(udp_handle->sockPort == 0){
             addrlen = sizeof addr;
             if(uv_udp_getsockname(udp_handle, &addr, &addrlen)){
                 return -1;
@@ -194,7 +191,7 @@ namespace HPHP {
     
     static int64_t HHVM_METHOD(UVUdp, sendTo, const String &dest, int64_t port, const String &data) {
         int64_t ret;
-        UdpResourceData *resource_data = FETCH_RESOURCE(this_, UdpResourceData, s_uvudp);
+        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) resource_data->getInternalResourceData();        
         send_req_t *req;
         req = new send_req_t();
