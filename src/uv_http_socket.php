@@ -15,7 +15,19 @@ class UVHttpSocket
     protected ?mixed $onCustomRead = null;
     protected ?mixed $onCustomWrite = null;
     protected ?mixed $onCustomError = null;
-
+    
+    protected function unReference():void
+    {
+        $this->client = null;
+        $this->onRequest = null;
+        $this->onCustomRead = null;
+        $this->onCustomWrite = null;
+        $this->onCustomError = null;
+        $this->onRead = null;
+        $this->onWrite = null;
+        $this->onError = null;    
+    }
+    
     protected function resetHttpRequest():void
     {
         $this->keepAlive = false;
@@ -36,7 +48,6 @@ class UVHttpSocket
         $this->onRequest = $onRequest;
         $this->resetHttpRequest();
     }
-
     public function getRequest(): array
     {
         return $this->http;
@@ -242,11 +253,10 @@ class UVHttpSocket
     }
 
     public function close(): void
-    {
+    {        
         if($this->client !== null){
             $this->client->close();
-            $this->client->customData = null;
-            $this->client = null;
+            $this->unReference();
         }
     }
 
