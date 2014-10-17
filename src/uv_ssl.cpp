@@ -98,7 +98,10 @@ namespace HPHP {
         ssl = fetchSSLResource(this_);
         switch(ssl_method){
             case 0:  //SSL_METHOD_SSLV2
-#ifndef OPENSSL_NO_SSL2
+#ifdef OPENSSL_NO_SSL2
+                ssl->ctx = SSL_CTX_new(SSLv3_method());
+                break;
+#else
                 ssl->ctx = SSL_CTX_new(SSLv2_method());
                 break;
 #endif
@@ -112,6 +115,11 @@ namespace HPHP {
                 ssl->ctx = SSL_CTX_new(TLSv1_method());
                 break;
             case 4:  //SSL_METHOD_TLSV1_1
+                ssl->ctx = SSL_CTX_new(TLSv1_1_method());
+                break;
+            case 5: //SSL_METHOD_TLSV1_2
+                ssl->ctx = SSL_CTX_new(TLSv1_2_method());
+                break;
             default:
                 ssl->ctx = SSL_CTX_new(TLSv1_1_method());
                 break;
