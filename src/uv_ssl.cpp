@@ -91,12 +91,31 @@ namespace HPHP {
         delete buf->base;
     }                                 
     
-    static void HHVM_METHOD(UVSSL, __construct){
+    static void HHVM_METHOD(UVSSL, __construct, int64_t ssl_method){
         check_ssl_support();
         ssl_ext_t *ssl;        
         initUVTcpObject(this_, uv_default_loop(), sizeof(uv_ssl_ext_t));
         ssl = fetchSSLResource(this_);
-        ssl->ctx = SSL_CTX_new(SSLv23_method());
+        switch(ssl_method){
+            case 0:  //SSL_METHOD_SSLV2
+#ifndef OPENSSL_NO_SSL2
+                ssl->ctx = SSL_CTX_new(SSLv2_method());
+                break;
+#endif
+            case 1:  //SSL_METHOD_SSLV3
+                ssl->ctx = SSL_CTX_new(SSLv3_method());
+                break;
+            case 2:  //SSL_METHOD_SSLV23
+                ssl->ctx = SSL_CTX_new(SSLv23_method());
+                break;
+            case 3:  //SSL_METHOD_TLSV1
+                ssl->ctx = SSL_CTX_new(TLSv1_method());
+                break;
+            case 4:  //SSL_METHOD_TLSV1_1
+            default:
+                ssl->ctx = SSL_CTX_new(TLSv1_1_method());
+                break;
+        }
     }
     
     static void HHVM_METHOD(UVSSL, __destruct){
