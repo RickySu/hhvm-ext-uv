@@ -21,6 +21,12 @@
     obj->o_set(rs, resource, ctx)
 
 #define SET_RESOURCE(obj, resource, ctx) SET_RESOURCE_EXT(obj, resource, ctx, s_internal_resource)
+
+#ifdef NEWOBJ
+    #define MAKE_RESOURCE(n, type, x) Resource n(NEWOBJ(type(x)))
+#else
+    #define MAKE_RESOURCE(n, type, x) Resource n(newres<type>(x))
+#endif
     
 namespace HPHP
 {

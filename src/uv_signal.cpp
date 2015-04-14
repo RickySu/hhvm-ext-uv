@@ -14,7 +14,7 @@ namespace HPHP {
     }
     
     static void HHVM_METHOD(UVSignal, __construct) {
-        Resource resource(NEWOBJ(InternalResourceData(sizeof(uv_signal_ext_t))));
+        MAKE_RESOURCE(resource, InternalResourceData, sizeof(uv_signal_ext_t));
         SET_RESOURCE(this_, resource, s_uvsignal);
         InternalResourceData *signal_resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvsignal);
         uv_signal_ext_t *signal_handle = (uv_signal_ext_t*) signal_resource_data->getInternalResourceData();

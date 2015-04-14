@@ -8,9 +8,8 @@
 #include "InternalResourceData.h"
 
 namespace HPHP {
-    IMPLEMENT_OBJECT_ALLOCATION(InternalResourceData)
-    
-    InternalResourceData::InternalResourceData(unsigned size) {
+    RESOURCEDATA_ALLOCATION(InternalResourceData)
+    InternalResourceData::InternalResourceData(unsigned size){
         resource = (void *) new char[size];
         memset(resource, '\0', size);        
     }

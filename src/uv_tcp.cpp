@@ -34,7 +34,7 @@ namespace HPHP {
     }
     
     uv_tcp_ext_t *initUVTcpObject(const Object &object, uv_loop_t *loop, int size_of_resource) {
-        Resource resource(NEWOBJ(InternalResourceData(size_of_resource)));
+        MAKE_RESOURCE(resource, InternalResourceData, size_of_resource);
         SET_RESOURCE(object, resource, s_uvtcp);
         InternalResourceData *tcp_resource_data = FETCH_RESOURCE(object, InternalResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) tcp_resource_data->getInternalResourceData();

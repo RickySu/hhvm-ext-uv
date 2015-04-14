@@ -21,7 +21,7 @@ namespace HPHP {
     }
     
     static void HHVM_METHOD(UVTimer, __construct) {
-        Resource resource(NEWOBJ(InternalResourceData(sizeof(uv_timer_ext_t))));
+        MAKE_RESOURCE(resource, InternalResourceData, sizeof(uv_timer_ext_t));
         SET_RESOURCE(this_, resource, s_uvtimer);
         InternalResourceData *timer_resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvtimer);
         uv_timer_ext_t *timer_handle = (uv_timer_ext_t*) timer_resource_data->getInternalResourceData();

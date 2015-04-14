@@ -8,7 +8,8 @@
 #include "R3ResourceData.h"
 
 namespace HPHP {
-    IMPLEMENT_OBJECT_ALLOCATION(R3ResourceData)
+
+    RESOURCEDATA_ALLOCATION(R3ResourceData)
     
     R3ResourceData::R3ResourceData(int count) {
         n = r3_tree_create(count);

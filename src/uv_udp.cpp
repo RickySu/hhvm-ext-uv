@@ -44,7 +44,7 @@ namespace HPHP {
     }
     
     ALWAYS_INLINE uv_udp_ext_t *initUVUdpObject(const Object &object, uv_loop_t *loop) {
-        Resource resource(NEWOBJ(InternalResourceData(sizeof(uv_udp_ext_t))));
+        MAKE_RESOURCE(resource, InternalResourceData, sizeof(uv_udp_ext_t));
         SET_RESOURCE(object, resource, s_uvudp);
         InternalResourceData *udp_resource_data = FETCH_RESOURCE(object, InternalResourceData, s_uvudp);
         uv_udp_ext_t *udp_handle = (uv_udp_ext_t *) udp_resource_data->getInternalResourceData();

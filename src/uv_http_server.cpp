@@ -3,7 +3,7 @@
 node *n = NULL;
 namespace HPHP {
     static Variant HHVM_METHOD(UVHttpServer, _R3RoutesAdd, const Array &routes) {
-        Resource resource(NEWOBJ(R3ResourceData(routes.size())));
+        MAKE_RESOURCE(resource, R3ResourceData, routes.size());
         SET_RESOURCE(this_, resource, s_uvhttpserver);
         R3ResourceData *resource_data = FETCH_RESOURCE(this_, R3ResourceData, s_uvhttpserver);
         node *n = resource_data->getR3ResourceData();

@@ -9,6 +9,7 @@
 #define	UVLOOP_RESOURCE_DATA_H
 
 #include "hphp/runtime/base/base-includes.h"
+#include "resource_util.h"
 #include <uv.h>
 
 #define DECLARE_CALLBACK_OBJECT_DATA(object) \
