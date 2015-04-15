@@ -15,6 +15,8 @@ if($pid){
     $fp = stream_socket_client("tcp://$host:$port", $errno, $errstr);
     fclose($fp);
     
+    usleep(100000); //wait server
+    
     $fp = stream_socket_client("tcp://$host:$port", $errno, $errstr);
     Equal('client closed', fread($fp, 1000), "Client close Trigger");
     fclose($fp);
