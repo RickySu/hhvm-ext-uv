@@ -73,8 +73,8 @@ UVLoop::defaultLoop()->run();
 ```php
 //SSL Echo Server
 $server = new UVSSL();
-$server->setCertFile("server.crt");    //PEM format
-$server->setPrivateKeyFile("server.key");  //PEM format
+$server->setCert(file_get_contents("server.crt"));    //PEM format
+$server->setPrivateKey(file_get_contents("server.key"));  //PEM format
 $server->setCertChainFile("chain.pem");
 $server->listen($host, $port, function($server){
     $client = $server->accept();

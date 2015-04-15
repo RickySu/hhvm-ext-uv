@@ -145,9 +145,28 @@ namespace HPHP {
         HHVM_MN(UVTcp, __destruct)(this_);
     }
 
-    static bool HHVM_METHOD(UVSSL, setCertFile, const String &certFile){
-        ssl_ext_t *ssl = fetchSSLResource(this_);
-        return SSL_CTX_use_certificate_file(ssl->ctx, certFile.c_str(), SSL_FILETYPE_PEM) == 1;
+    static bool HHVM_METHOD(UVSSL, setCert, const String &cert){
+        bool result;
+        X509 *pcert;
+        BIO *cert_bio;
+        ssl_ext_t *ssl = fetchSSLResource(this_);        
+        
+        cert_bio = BIO_new(BIO_s_mem());
+        if(BIO_write(cert_bio, (void *)cert.data(), cert.size()) <= 0){
+            return false;
+        }
+
+        pcert = PEM_read_bio_X509_AUX(cert_bio, NULL, NULL, NULL);
+        BIO_free(cert_bio);
+        
+        if(pcert == NULL){
+            return false;
+        }
+        
+        result = SSL_CTX_use_certificate(ssl->ctx, pcert);
+
+        X509_free(pcert);
+        return result;
     }
     
     static bool HHVM_METHOD(UVSSL, setCertChainFile, const String &certChainFile){
@@ -155,9 +174,29 @@ namespace HPHP {
         return SSL_CTX_use_certificate_chain_file(ssl->ctx, certChainFile.c_str()) == 1;
     }    
     
-    static bool HHVM_METHOD(UVSSL, setPrivateKeyFile, const String &privateKeyFile){
+    static bool HHVM_METHOD(UVSSL, setPrivateKey, const String &privateKey){
+        bool result;
+        EVP_PKEY *pkey;
+        BIO *key_bio;    
         ssl_ext_t *ssl = fetchSSLResource(this_);
-        return SSL_CTX_use_PrivateKey_file(ssl->ctx, privateKeyFile.c_str(), SSL_FILETYPE_PEM) == 1;
+        key_bio = BIO_new(BIO_s_mem());
+        
+        if(BIO_write(key_bio, (void *)privateKey.data(), privateKey.size()) <= 0){
+            return false;
+        }
+
+        pkey = PEM_read_bio_PrivateKey(key_bio, NULL, NULL, NULL);
+        BIO_free(key_bio);
+        
+        if(pkey == NULL){
+            return false;
+        }
+        
+        result = SSL_CTX_use_PrivateKey(ssl->ctx, pkey);
+
+        EVP_PKEY_free(pkey);
+        
+        return result;
     }    
     
     static Object HHVM_METHOD(UVSSL, accept){
@@ -239,9 +278,9 @@ namespace HPHP {
         HHVM_ME(UVSSL, write);
         HHVM_ME(UVSSL, __construct);
         HHVM_ME(UVSSL, __destruct);
-        HHVM_ME(UVSSL, setCertFile);
+        HHVM_ME(UVSSL, setCert);
         HHVM_ME(UVSSL, setCertChainFile);
-        HHVM_ME(UVSSL, setPrivateKeyFile);
+        HHVM_ME(UVSSL, setPrivateKey);
         HHVM_ME(UVSSL, connect);
     }
 }

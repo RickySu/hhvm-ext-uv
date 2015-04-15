@@ -29,10 +29,11 @@ if($pid){
 
 $loop = UVLoop::defaultLoop();
 $server = new UVSSL();
-$server->setCertFile(__DIR__."/cert/server.crt");
-$server->setPrivateKeyFile(__DIR__."/cert/server.key");
+$server->setCert(file_get_contents(__DIR__."/cert/server.crt"));
+$server->setPrivateKey(file_get_contents(__DIR__."/cert/server.key"));
 $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
+
     $client = $server->accept();
     $client->setSSLHandshakeCallback(function($client) use($server){
         if($server->clientCloseTriggered){
