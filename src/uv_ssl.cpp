@@ -12,7 +12,9 @@
 namespace HPHP {
 
     typedef struct {
-        SSL_CTX* ctx;
+        const SSL_METHOD *ssl_method;
+        SSL_CTX** ctx;
+        int nctx;
         SSL* ssl;
         BIO* read_bio;
         BIO* write_bio;
@@ -26,6 +28,25 @@ namespace HPHP {
         InternalResourceData *resource_data = FETCH_RESOURCE(obj, InternalResourceData, s_uvssl);
         uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) resource_data->getInternalResourceData();
         return (ssl_ext_t *) &ssl_handle->ssl;
+    }
+        
+    static int sni_cb(SSL *s, int *ad, void *arg) {
+        Variant result;
+        int64_t n;
+        ObjectData *object_data = (ObjectData *)arg;
+        ssl_ext_t *ssl = fetchSSLResource(object_data);
+        auto sslServerNameCallback = object_data->o_get("sslServerNameCallback", false, s_uvssl);
+        const char *servername = SSL_get_servername(s, TLSEXT_NAMETYPE_host_name);
+        if(servername != NULL && !sslServerNameCallback.isNull()){
+            result = vm_call_user_func(sslServerNameCallback, make_packed_array(StringData::Make(servername, CopyString)));
+            if(result.isInteger()){
+                n = result.toInt64Val();
+                if(n>=0 && n<ssl->nctx){
+                    SSL_set_SSL_CTX(s, ssl->ctx[n]);
+                }
+            }
+        }
+        return SSL_TLSEXT_ERR_OK;
     }
     
     static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
@@ -52,7 +73,7 @@ namespace HPHP {
     static void read_cb(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf) {
         auto readCallback = ssl_handle->tcp_object_data->o_get("readCallback", false, s_uvssl);
         auto errorCallback = ssl_handle->tcp_object_data->o_get("errorCallback", false, s_uvssl);
-        auto sslHandshakeCallback = ssl_handle->tcp_object_data->o_get("sslHandshakeCallback", false, s_uvssl);        
+        auto sslHandshakeCallback = ssl_handle->tcp_object_data->o_get("sslHandshakeCallback", false, s_uvssl);
         char read_buf[1024];
         int size, err, ret;
         if(nread > 0){
@@ -91,39 +112,51 @@ namespace HPHP {
         delete buf->base;
     }                                 
     
-    static void HHVM_METHOD(UVSSL, __construct, int64_t ssl_method){
+    static void HHVM_METHOD(UVSSL, __construct, int64_t method, int64_t nContexts){
         check_ssl_support();
-        ssl_ext_t *ssl;        
+        ssl_ext_t *ssl;
         initUVTcpObject(this_, uv_default_loop(), sizeof(uv_ssl_ext_t));
         ssl = fetchSSLResource(this_);
-        switch(ssl_method){
+        switch(method){
             case 0:  //SSL_METHOD_SSLV2
 #ifdef OPENSSL_NO_SSL2
-                ssl->ctx = SSL_CTX_new(SSLv3_method());
+                ssl->ssl_method = SSLv3_method();
                 break;
 #else
-                ssl->ctx = SSL_CTX_new(SSLv2_method());
+                ssl->ssl_method = SSLv2_method();
                 break;
 #endif
             case 1:  //SSL_METHOD_SSLV3
-                ssl->ctx = SSL_CTX_new(SSLv3_method());
+                ssl->ssl_method = SSLv3_method();
                 break;
             case 2:  //SSL_METHOD_SSLV23
-                ssl->ctx = SSL_CTX_new(SSLv23_method());
+                ssl->ssl_method = SSLv23_method();
                 break;
             case 3:  //SSL_METHOD_TLSV1
-                ssl->ctx = SSL_CTX_new(TLSv1_method());
+                ssl->ssl_method = TLSv1_method();
                 break;
             case 4:  //SSL_METHOD_TLSV1_1
-                ssl->ctx = SSL_CTX_new(TLSv1_1_method());
+                ssl->ssl_method = TLSv1_1_method();
                 break;
             case 5: //SSL_METHOD_TLSV1_2
-                ssl->ctx = SSL_CTX_new(TLSv1_2_method());
+                ssl->ssl_method = TLSv1_2_method();
                 break;
             default:
-                ssl->ctx = SSL_CTX_new(TLSv1_1_method());
+                ssl->ssl_method = TLSv1_1_method();
                 break;
         }
+        ssl->ctx = new SSL_CTX *[nContexts];
+        ssl->nctx = nContexts;
+        for(int i = 0; i < nContexts; i++){
+            ssl->ctx[i] = SSL_CTX_new(ssl->ssl_method);
+            SSL_CTX_set_session_cache_mode(ssl->ctx[i], SSL_SESS_CACHE_BOTH);
+        }
+#ifndef OPENSSL_NO_TLSEXT        
+        if(method > 2){ // tls
+            SSL_CTX_set_tlsext_servername_callback(ssl->ctx[0], sni_cb);
+            SSL_CTX_set_tlsext_servername_arg(ssl->ctx[0], this_);
+        }
+#endif        
     }
     
     static void HHVM_METHOD(UVSSL, __destruct){
@@ -140,17 +173,23 @@ namespace HPHP {
             if(ssl->ssl){
                 SSL_free(ssl->ssl);
             }
-            SSL_CTX_free(ssl->ctx);            
+            for(int i=0;i<ssl->nctx;i++){
+                SSL_CTX_free(ssl->ctx[i]);
+            }
+            delete ssl->ctx;
+            ssl->ctx = NULL;
         }
         HHVM_MN(UVTcp, __destruct)(this_);
     }
 
-    static bool HHVM_METHOD(UVSSL, setCert, const String &cert){
+    static bool HHVM_METHOD(UVSSL, setCert, const String &cert, int64_t n){
         bool result;
         X509 *pcert;
         BIO *cert_bio;
         ssl_ext_t *ssl = fetchSSLResource(this_);        
-        
+        if(n<0 || n>=ssl->nctx){
+            return false;
+        }
         cert_bio = BIO_new(BIO_s_mem());
         if(BIO_write(cert_bio, (void *)cert.data(), cert.size()) <= 0){
             return false;
@@ -162,8 +201,7 @@ namespace HPHP {
         if(pcert == NULL){
             return false;
         }
-        
-        result = SSL_CTX_use_certificate(ssl->ctx, pcert);
+        result = SSL_CTX_use_certificate(ssl->ctx[n], pcert);
 
         X509_free(pcert);
         return result;
@@ -171,16 +209,18 @@ namespace HPHP {
     
     static bool HHVM_METHOD(UVSSL, setCertChainFile, const String &certChainFile){
         ssl_ext_t *ssl = fetchSSLResource(this_);
-        return SSL_CTX_use_certificate_chain_file(ssl->ctx, certChainFile.c_str()) == 1;
+        return SSL_CTX_use_certificate_chain_file(ssl->ctx[0], certChainFile.c_str()) == 1;
     }    
     
-    static bool HHVM_METHOD(UVSSL, setPrivateKey, const String &privateKey){
+    static bool HHVM_METHOD(UVSSL, setPrivateKey, const String &privateKey, int64_t n){
         bool result;
         EVP_PKEY *pkey;
         BIO *key_bio;    
         ssl_ext_t *ssl = fetchSSLResource(this_);
-        key_bio = BIO_new(BIO_s_mem());
-        
+        if(n<0 || n>=ssl->nctx){
+            return false;
+        }
+        key_bio = BIO_new(BIO_s_mem());        
         if(BIO_write(key_bio, (void *)privateKey.data(), privateKey.size()) <= 0){
             return false;
         }
@@ -192,7 +232,7 @@ namespace HPHP {
             return false;
         }
         
-        result = SSL_CTX_use_PrivateKey(ssl->ctx, pkey);
+        result = SSL_CTX_use_PrivateKey(ssl->ctx[n], pkey);
 
         EVP_PKEY_free(pkey);
         
@@ -207,7 +247,7 @@ namespace HPHP {
         uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
         server_ssl = fetchSSLResource(this_);                
         ssl = fetchSSLResource(obj);
-        ssl->ssl = SSL_new(server_ssl->ctx);
+        ssl->ssl = SSL_new(server_ssl->ctx[0]);
         ssl->read_bio = BIO_new(BIO_s_mem());
         ssl->write_bio = BIO_new(BIO_s_mem());        
         SSL_set_bio(ssl->ssl, ssl->read_bio, ssl->write_bio);
@@ -242,7 +282,7 @@ namespace HPHP {
         ssl_ext_t *ssl = &ssl_handle->ssl;
         auto callback = ssl_handle->tcp_object_data->o_get("connectCallback", false, s_uvssl);
         uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
-        ssl->ssl = SSL_new(ssl->ctx);
+        ssl->ssl = SSL_new(ssl->ctx[0]);
         ssl->read_bio = BIO_new(BIO_s_mem());
         ssl->write_bio = BIO_new(BIO_s_mem());        
         SSL_set_bio(ssl->ssl, ssl->read_bio, ssl->write_bio);
