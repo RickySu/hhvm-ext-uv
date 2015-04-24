@@ -17,7 +17,7 @@ namespace HPHP {
         
         if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
             handle->flag &= ~UV_TCP_HANDLE_INTERNAL_REF;
-            ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefCount();            
+            ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
         }
         
         if(handle->sockPort != 0){
