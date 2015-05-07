@@ -7,7 +7,7 @@ before_script:
     -  sudo apt-add-repository ppa:mapnik/boost -y
     -  sudo apt-add-repository ppa:ubuntu-toolchain-r/test -y
     -  sudo apt-add-repository ppa:fcitx-team/nightly -y
-    -  sudo apt-add-repository ppa:voxops/ppa
+    -  sudo apt-add-repository ppa:voxops/ppa -y
     -  wget -O - http://dl.hhvm.com/conf/hhvm.gpg.key | sudo apt-key add -
     -  echo deb http://dl.hhvm.com/ubuntu precise main | sudo tee /etc/apt/sources.list.d/hhvm.list
     -  sudo apt-get update
