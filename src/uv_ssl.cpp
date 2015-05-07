@@ -207,11 +207,6 @@ namespace HPHP {
         return result;
     }
     
-    static bool HHVM_METHOD(UVSSL, setCertChainFile, const String &certChainFile){
-        ssl_ext_t *ssl = fetchSSLResource(this_);
-        return SSL_CTX_use_certificate_chain_file(ssl->ctx[0], certChainFile.c_str()) == 1;
-    }    
-    
     static bool HHVM_METHOD(UVSSL, setPrivateKey, const String &privateKey, int64_t n){
         bool result;
         EVP_PKEY *pkey;
@@ -319,7 +314,6 @@ namespace HPHP {
         HHVM_ME(UVSSL, __construct);
         HHVM_ME(UVSSL, __destruct);
         HHVM_ME(UVSSL, setCert);
-        HHVM_ME(UVSSL, setCertChainFile);
         HHVM_ME(UVSSL, setPrivateKey);
         HHVM_ME(UVSSL, connect);
     }

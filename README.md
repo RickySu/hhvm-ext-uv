@@ -75,7 +75,6 @@ UVLoop::defaultLoop()->run();
 $server = new UVSSL();
 $server->setCert(file_get_contents("server.crt"));    //PEM format
 $server->setPrivateKey(file_get_contents("server.key"));  //PEM format
-$server->setCertChainFile("chain.pem");
 $server->listen($host, $port, function($server){
     $client = $server->accept();
     $client->setSSLHandshakeCallback(function($client){
@@ -135,7 +134,6 @@ $server->listen($host, $port, function($server){
 $ssl = new UVSSL();
 $ssl->setCertFile("server.crt");    //PEM format
 $ssl->setPrivateKeyFile("server.key");  //PEM format
-$ssl->setCertChainFile("chain.pem");
 
 $server = new UVHttpServer('127.0.0.1', 8443);
 $server->setSocket($ssl);
