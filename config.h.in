@@ -1,5 +1,6 @@
 #ifndef CONFIG_H
 #define	CONFIG_H
 #cmakedefine OPENSSL_FOUND
+#cmakedefine HHVM_API_VERSION ${HHVM_API_VERSION}
 #endif	/* CONFIG_H */
 

@@ -1,11 +1,6 @@
 #ifndef EXT_H_
 #define EXT_H_
-#include "../config.h"
-#include "hphp/runtime/base/base-includes.h"
-#include "hphp/runtime/base/socket.h"
-#include "hphp/runtime/base/array-init.h"
-#include "hphp/runtime/base/builtin-functions.h"
-#include "hphp/runtime/vm/jit/translator-inline.h"
+#include "hhvm_include.h"
 #include "resource/InternalResourceData.h"
 #include "resource/R3ResourceData.h"
 #include "common.h"

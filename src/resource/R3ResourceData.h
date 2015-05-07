@@ -7,9 +7,9 @@
 
 #ifndef UVLOOP_R3RESOURCE_DATA_H
 #define	UVLOOP_R3RESOURCE_DATA_H
-#include <r3/r3.h>
-#include "hphp/runtime/base/base-includes.h"
+#include "../hhvm_include.h"
 #include "resource_util.h"
+#include <r3/r3.h>
 
 namespace HPHP {
 
