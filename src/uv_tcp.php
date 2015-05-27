@@ -8,7 +8,17 @@ class UVTcp
     protected ?callable $writeCallback;
     protected ?callable $errorCallback;
     protected ?callable $shutdownCallback;
-    
+
+    final public function __clone()
+    {
+        $this->_rs = null;
+        $this->connectCallback = null;
+        $this->readCallback = null;
+        $this->writeCallback = null;
+        $this->errorCallback = null;
+        $this->shutdownCallback = null;
+    }
+        
     public function makeCallable(mixed $callback):callable
     {
         if(is_string($callback)){

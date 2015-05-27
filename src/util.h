@@ -31,25 +31,26 @@
 namespace HPHP
 {
 
-    ALWAYS_INLINE Object makeObject(const String &ClassName, const Array arg, bool init){
+    ALWAYS_INLINE ObjectData *makeObject(const String &ClassName, const Array arg, bool init){
         Class* cls = Unit::lookupClass(ClassName.get());
-        Object ret = ObjectData::newInstance(cls);
+        ObjectData* ret;
+        Object o = ret = ObjectData::newInstance(cls);        
         if(init){
             TypedValue dummy;
-            g_context->invokeFunc(&dummy, cls->getCtor(), arg, ret.get());
+            g_context->invokeFunc(&dummy, cls->getCtor(), arg, ret);
         }
-        return ret;
+        return o.detach();
     }
 
-    ALWAYS_INLINE Object makeObject(const String &ClassName, bool init = true){
+    ALWAYS_INLINE ObjectData *makeObject(const String &ClassName, bool init = true){
         return makeObject(ClassName, Array::Create(), init);
     }
 
-    ALWAYS_INLINE Object makeObject(const char *ClassName, const Array arg){
+    ALWAYS_INLINE ObjectData *makeObject(const char *ClassName, const Array arg){
         return makeObject(String(ClassName), arg, true);
     }
 
-    ALWAYS_INLINE Object makeObject(const char *ClassName, bool init = true){
+    ALWAYS_INLINE ObjectData *makeObject(const char *ClassName, bool init = true){
         return makeObject(String(ClassName), Array::Create(), init);
     }
 

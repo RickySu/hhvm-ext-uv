@@ -1,6 +1,7 @@
 #include "ext.h"
 #include "hphp/runtime/base/thread-init-fini.h"
 #include "uv_tcp.h"
+#include "hphp/runtime/vm/native-data.h"
 
 namespace HPHP {
 
@@ -110,7 +111,7 @@ namespace HPHP {
     void HHVM_METHOD(UVTcp, __destruct) {
         InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvtcp);
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
-        releaseHandle(tcp_handle);    
+        releaseHandle(tcp_handle);
     }
     
     int64_t HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
@@ -142,15 +143,15 @@ namespace HPHP {
     }
     
     Object make_accepted_uv_tcp_object(const Object &obj, const String &class_name, int size) {
+        ObjectData *client;
         InternalResourceData *resource_data = FETCH_RESOURCE(obj, InternalResourceData, s_uvtcp);
         uv_tcp_ext_t *server_tcp_handle, *client_tcp_handle;
         server_tcp_handle = (uv_tcp_ext_t *) resource_data->getInternalResourceData();
-        Object client = makeObject(class_name, false);
+        client = obj.get()->cloneImpl();
         client_tcp_handle = initUVTcpObject(client, server_tcp_handle->loop, size);
         if(uv_accept((uv_stream_t *) server_tcp_handle, (uv_stream_t *) client_tcp_handle)) {
             return NULL;
         }
-        client.get()->incRefCount();
         client_tcp_handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
         return client;    
     }
