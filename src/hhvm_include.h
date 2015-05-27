@@ -3,11 +3,10 @@
 
 #include "../config.h"
 #if HHVM_API_VERSION < 20150212
-    #include "hphp/runtime/base/base-includes.h"
-#else
-    #include "hphp/runtime/ext/extension.h"
+    #error hhvm version must >= 3.6.0
 #endif
 
+#include "hphp/runtime/ext/extension.h"
 #include "hphp/runtime/base/socket.h"
 #include "hphp/runtime/base/array-init.h"
 #include "hphp/runtime/base/builtin-functions.h"
