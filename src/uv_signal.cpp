@@ -1,5 +1,5 @@
 #include "ext.h"
-#include "hphp/runtime/base/thread-init-fini.h"
+#include "uv_natice_data.h"
 
 namespace HPHP {
 
@@ -7,50 +7,62 @@ namespace HPHP {
         bool start;
         ObjectData *signal_object_data;        
     } uv_signal_ext_t;
+
+    ALWAYS_INLINE uv_signal_ext_t *fetchResource(UVNativeData *data){
+        return (uv_signal_ext_t *) data->resource_handle;
+    }
+    
+    ALWAYS_INLINE void releaseHandle(uv_signal_ext_t *handle) {
+        if(handle->start){
+            uv_signal_stop((uv_signal_t *) handle);
+        }
+        uv_unref((uv_handle_t *) handle);
+        delete handle;
+    }
     
     static void signal_handle_callback(uv_signal_ext_t *signal_handle, int signo) {
-        auto callback = signal_handle->signal_object_data->o_get("callback", false, s_uvsignal);
-        vm_call_user_func(callback, make_packed_array(signal_handle->signal_object_data, signo));
+        auto* data = Native::data<UVNativeData>(signal_handle->signal_object_data);
+        vm_call_user_func(data->callback, make_packed_array(signal_handle->signal_object_data, signo));
     }
     
     static void HHVM_METHOD(UVSignal, __construct) {
-        MAKE_RESOURCE(resource, InternalResourceData, sizeof(uv_signal_ext_t));
-        SET_RESOURCE(this_, resource, s_uvsignal);
-        InternalResourceData *signal_resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvsignal);
-        uv_signal_ext_t *signal_handle = (uv_signal_ext_t*) signal_resource_data->getInternalResourceData();
+        auto* data = Native::data<UVNativeData>(this_);
+        data->resource_handle = (void *) new uv_signal_ext_t();
+        uv_signal_ext_t *signal_handle = fetchResource(data);
         uv_signal_init(uv_default_loop(), signal_handle);
         signal_handle->start = false;
+        signal_handle->signal_object_data = NULL;
     }
     
     static int64_t HHVM_METHOD(UVSignal, start, const Variant &signal_cb, int64_t signo) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvsignal);
-        uv_signal_ext_t *signal_handle = (uv_signal_ext_t *) resource_data->getInternalResourceData();
-        this_->o_set("callback", signal_cb, s_uvsignal);
-        signal_handle->start = true;
+        auto* data = Native::data<UVNativeData>(this_);
+        uv_signal_ext_t *signal_handle = fetchResource(data);
+        data->callback = signal_cb;
         int64_t ret = uv_signal_start(signal_handle, (uv_signal_cb) signal_handle_callback, signo);
         if(ret == 0){
-            signal_handle->signal_object_data = getThisOjectData(this_);        
-            getThisOjectData(this_)->incRefCount();
+            signal_handle->start = true;
+            signal_handle->signal_object_data = this_;
+            this_->incRefCount();
         }
         return ret;
     }
     
     static int64_t HHVM_METHOD(UVSignal, stop) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvsignal);
-        uv_signal_ext_t *signal_handle = (uv_signal_ext_t *) resource_data->getInternalResourceData();
+        auto* data = Native::data<UVNativeData>(this_);
+        uv_signal_ext_t *signal_handle = fetchResource(data);
         int64_t ret = 0;
         if(signal_handle->start){
             ret = uv_signal_stop((uv_signal_t *) signal_handle);
-            getThisOjectData(this_)->decRefAndRelease();
+            this_->decRefAndRelease();
             signal_handle->start = false;            
         }
         return ret;
     }    
     
     static void HHVM_METHOD(UVSignal, __destruct) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvsignal);
-        uv_signal_ext_t *signal_handle = (uv_signal_ext_t *) resource_data->getInternalResourceData();
-        uv_unref((uv_handle_t *) signal_handle);
+        auto* data = Native::data<UVNativeData>(this_);
+        uv_signal_ext_t *signal_handle = fetchResource(data);
+        releaseHandle(signal_handle);
     }
     
     void uvExtension::_initUVSignalClass() {
@@ -58,5 +70,6 @@ namespace HPHP {
         HHVM_ME(UVSignal, __destruct);        
         HHVM_ME(UVSignal, start);
         HHVM_ME(UVSignal, stop);
+        Native::registerNativeDataInfo<UVNativeData>(s_uvsignal.get());
     }
 }
