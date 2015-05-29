@@ -172,9 +172,9 @@ namespace HPHP {
             ssl_handle->sslResource.ctx = NULL;
         }
         data->release();
-        if(data->tcp_handle){
-            delete data->tcp_handle;
-        }
+        ssl_handle->sslHandshakeCallback.releaseForSweep();
+        ssl_handle->sslServerNameCallback.releaseForSweep();
+        delete ssl_handle;
     }
 
     static bool HHVM_METHOD(UVSSL, setCert, const String &cert, int64_t n){

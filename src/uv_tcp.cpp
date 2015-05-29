@@ -4,6 +4,11 @@ namespace HPHP {
 
     UVTcpData::~UVTcpData()
     {
+        connectCallback.releaseForSweep();
+        readCallback.releaseForSweep();
+        writeCallback.releaseForSweep();
+        errorCallback.releaseForSweep();
+        shutdownCallback.releaseForSweep();
         release();
     }
     
@@ -143,7 +148,7 @@ namespace HPHP {
         if((ret = uv_listen((uv_stream_t *) data->tcp_handle, SOMAXCONN, (uv_connection_cb) connection_cb)) != 0){
             return ret;
         }
-        data->connectCallback = onConnectCallback;        
+        data->connectCallback = onConnectCallback;
         data->tcp_handle->flag |= UV_TCP_HANDLE_START;
         return ret;
     }
@@ -168,6 +173,7 @@ namespace HPHP {
     
     static void HHVM_METHOD(UVTcp, close) {
         auto* data = Native::data<UVTcpData>(this_);
+
         tcp_close_socket(data->tcp_handle);
     }
     
@@ -288,14 +294,15 @@ namespace HPHP {
         return ret;
     }
 
-    static int64_t HHVM_METHOD(UVTcp, shutdown,const Variant &onShutdownCallback) {
+    static int64_t HHVM_METHOD(UVTcp, shutdown, const Variant &onShutdownCallback) {
         int64_t ret;
         auto* data = Native::data<UVTcpData>(this_);
-        
+
+        data->shutdownCallback = onShutdownCallback;        
         if((ret = uv_shutdown(&data->tcp_handle->shutdown_req, (uv_stream_t *) data->tcp_handle, shutdown_cb)) != 0){
             return ret;
         }
-        this_->o_set("shutdownCallback", onShutdownCallback, s_uvtcp);
+
         data->tcp_handle->flag |= UV_TCP_HANDLE_START;
         return ret;
     }
