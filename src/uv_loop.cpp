@@ -1,4 +1,13 @@
 #include "ext.h"
+#define RUN_DEFAULT  0
+#define RUN_ONCE  1
+#define RUN_NOWAIT 2
+
+
+#define REGISTER_UV_LOOP_CONSTANT(name) \
+    Native::registerClassConstant<KindOfInt64>(s_uvloop.get(), \
+            makeStaticString(#name), \
+            name)
 
 namespace HPHP {
 
@@ -10,13 +19,13 @@ namespace HPHP {
         uv_run_mode mode;
         VMRegAnchor _;
         switch(option){
-            case 0:
+            case RUN_DEFAULT:
                 mode = UV_RUN_DEFAULT;
                 break;
-            case 1:
+            case RUN_ONCE:
                 mode = UV_RUN_ONCE;
                 break;            
-            case 2:
+            case RUN_NOWAIT:
                 mode = UV_RUN_NOWAIT;
                 break;
             default:
@@ -47,6 +56,10 @@ namespace HPHP {
     }    
     
     void uvExtension::_initUVLoopClass() {
+        REGISTER_UV_LOOP_CONSTANT(RUN_DEFAULT);
+        REGISTER_UV_LOOP_CONSTANT(RUN_ONCE);
+        REGISTER_UV_LOOP_CONSTANT(RUN_NOWAIT);
+        
         HHVM_ME(UVLoop, run);
         HHVM_ME(UVLoop, alive);
         HHVM_ME(UVLoop, updateTime);

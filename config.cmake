@@ -29,6 +29,7 @@ HHVM_EXTENSION(uv
     src/uv_timer.cpp
     src/uv_http_server.cpp
     src/uv_ssl.cpp
+    src/uv_natice_data.cpp
 )
 HHVM_SYSTEMLIB(uv ext_uv.php)
 
