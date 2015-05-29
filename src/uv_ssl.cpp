@@ -109,7 +109,7 @@ namespace HPHP {
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
         initSSLHandle(ssl_handle);
         switch(method){
-            case 0:  //SSL_METHOD_SSLV2
+            case SSL_METHOD_SSLV2:
 #ifdef OPENSSL_NO_SSL2
                 ssl_handle->sslResource.ssl_method = SSLv3_method();
                 break;
@@ -117,19 +117,19 @@ namespace HPHP {
                 ssl_handle->sslResource.ssl_method = SSLv2_method();
                 break;
 #endif
-            case 1:  //SSL_METHOD_SSLV3
+            case SSL_METHOD_SSLV3:
                 ssl_handle->sslResource.ssl_method = SSLv3_method();
                 break;
-            case 2:  //SSL_METHOD_SSLV23
+            case SSL_METHOD_SSLV23:
                 ssl_handle->sslResource.ssl_method = SSLv23_method();
                 break;
-            case 3:  //SSL_METHOD_TLSV1
+            case SSL_METHOD_TLSV1:
                 ssl_handle->sslResource.ssl_method = TLSv1_method();
                 break;
-            case 4:  //SSL_METHOD_TLSV1_1
+            case SSL_METHOD_TLSV1_1:
                 ssl_handle->sslResource.ssl_method = TLSv1_1_method();
                 break;
-            case 5: //SSL_METHOD_TLSV1_2
+            case SSL_METHOD_TLSV1_2:
                 ssl_handle->sslResource.ssl_method = TLSv1_2_method();
                 break;
             default:
@@ -143,7 +143,7 @@ namespace HPHP {
             SSL_CTX_set_session_cache_mode(ssl_handle->sslResource.ctx[i], SSL_SESS_CACHE_BOTH);
         }
 #ifndef OPENSSL_NO_TLSEXT        
-        if(method > 2){ // tls
+        if(method >= SSL_METHOD_TLSV1){
             SSL_CTX_set_tlsext_servername_callback(ssl_handle->sslResource.ctx[0], sni_cb);
             SSL_CTX_set_tlsext_servername_arg(ssl_handle->sslResource.ctx[0], this_);
         }
@@ -316,6 +316,13 @@ namespace HPHP {
     }
     
     void uvExtension::_initUVSSLClass() {
+        REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV2);
+        REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV3);
+        REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV23);
+        REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1);
+        REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1_1);
+        REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1_2);
+        
         HHVM_ME(UVSSL, accept);
         HHVM_ME(UVSSL, setCallback);
         HHVM_ME(UVSSL, write);

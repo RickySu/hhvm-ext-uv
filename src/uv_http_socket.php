@@ -209,7 +209,6 @@ class UVHttpSocket
     {
         $this->onRead = function(UVTcp $client, string $data)
         {
-            echo $data;
             if($this->onCustomRead !== null){
                 ($this->onCustomRead)($this, $data);
                 return;
