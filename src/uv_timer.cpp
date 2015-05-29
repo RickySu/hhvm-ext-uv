@@ -18,6 +18,9 @@ namespace HPHP {
     }
     
     ALWAYS_INLINE void releaseHandle(uv_timer_ext_t *handle) {
+         if(handle->start){
+            uv_timer_stop((uv_timer_t *) handle);
+         }
          uv_unref((uv_handle_t *) handle);
          delete handle;
     }
@@ -39,6 +42,7 @@ namespace HPHP {
         if(ret == 0){
             timer_handle->start = true;
             timer_handle->timer_object_data = this_;
+            this_->incRefCount();
         }
         return ret;
     }
@@ -50,6 +54,7 @@ namespace HPHP {
         if(timer_handle->start){
             ret = uv_timer_stop((uv_timer_t *) timer_handle);
             timer_handle->start = false;
+            this_->decRefAndRelease();
         }
         return ret;
     }    
