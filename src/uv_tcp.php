@@ -1,40 +1,7 @@
 <?hh
+<<__NativeData("UVTcp")>>
 class UVTcp
 {
-    protected ?resource $_rs;
-    
-    protected ?callable $connectCallback;
-    protected ?callable $readCallback;
-    protected ?callable $writeCallback;
-    protected ?callable $errorCallback;
-    protected ?callable $shutdownCallback;
-
-    final public function __clone()
-    {
-        $this->_rs = null;
-        $this->connectCallback = null;
-        $this->readCallback = null;
-        $this->writeCallback = null;
-        $this->errorCallback = null;
-        $this->shutdownCallback = null;
-    }
-        
-    public function makeCallable(mixed $callback):callable
-    {
-        if(is_string($callback)){
-            return fun($callback);
-        }
-        
-        if(is_array($callback)){
-            list($object, $method) = $callback;
-            if(is_string($oject)){
-                return class_meth($callback);
-            }
-            return inst_meth($callback);
-        }
-        return $callback;
-    }
-    
     <<__Native>> function __construct():void;
     <<__Native>> function __destruct():void;
     <<__Native>> function listen(string $host, int $port, mixed $onConnectCallback):int;

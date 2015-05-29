@@ -1,4 +1,5 @@
 <?hh
+<<__NativeData("UVResolver")>>
 class UVResolver
 {
     protected ?callable $addrinfoCallback;

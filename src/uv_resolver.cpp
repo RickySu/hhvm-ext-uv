@@ -6,6 +6,10 @@
 
 namespace HPHP {
 
+    class UVResolver {
+        
+    };
+    
     typedef struct uv_getaddrinfo_ext_s: public uv_getaddrinfo_t{
         ObjectData *resolver_object_data;
     } uv_getaddrinfo_ext_t;
@@ -73,5 +77,6 @@ namespace HPHP {
     void uvExtension::_initUVResolverClass() {
         HHVM_ME(UVResolver, getaddrinfo);
         HHVM_ME(UVResolver, getnameinfo);
+        Native::registerNativeDataInfo<UVResolver>(s_uvresolver.get());
     }
 }
