@@ -59,6 +59,13 @@ namespace HPHP {
             Variant writeCallback;
             Variant errorCallback;
             Variant shutdownCallback;
+            UVTcpData(){
+                connectCallback.setNull();
+                readCallback.setNull();
+                writeCallback.setNull();
+                errorCallback.setNull();
+                shutdownCallback.setNull();
+            }
             ~UVTcpData();
             void release();
     };    

@@ -14,7 +14,7 @@ namespace HPHP {
     
     void UVTcpData::release()
     {
-        if(tcp_handle != NULL){
+        if(tcp_handle){
             releaseHandle(tcp_handle);
         }
     }
