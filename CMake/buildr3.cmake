@@ -21,7 +21,7 @@ ExternalProject_Add_Step(R3 AUTOGEN
 )
 
 ExternalProject_Add_Step(R3 CONFIGURE
-    COMMAND CFLAGS=-fPIC ./configure --prefix=${R3_PREFIX_DIR}
+    COMMAND env CFLAGS=-fPIC\ -O2 ./configure --prefix=${R3_PREFIX_DIR}
     WORKING_DIRECTORY ${R3_SOURCE}
     DEPENDEES AUTOGEN
     COMMENT "r3 configure..."

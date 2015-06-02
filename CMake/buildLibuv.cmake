@@ -20,7 +20,7 @@ ExternalProject_Add_Step(LIBUV AUTOGEN
 )
 
 ExternalProject_Add_Step(LIBUV CONFIGURE
-    COMMAND CFLAGS=-fPIC ./configure --prefix=${LIBUV_PREFIX_DIR}
+    COMMAND env CFLAGS=-fPIC\ -O2 ./configure --prefix=${LIBUV_PREFIX_DIR}
     WORKING_DIRECTORY ${LIBUV_SOURCE}
     DEPENDEES AUTOGEN
     COMMENT "libuv configure..."
