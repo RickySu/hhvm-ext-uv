@@ -47,8 +47,7 @@ namespace HPHP {
     }
     
     static int64_t HHVM_METHOD(UVLoop, backendFd) {
-        InternalResourceData *resource_data = FETCH_RESOURCE(this_, InternalResourceData, s_uvloop);
-        return uv_backend_fd((const uv_loop_t *)resource_data->getInternalResourceData());
+        return uv_backend_fd(uv_default_loop());
     }
     
     static int64_t HHVM_METHOD(UVLoop, backendTimeout) {

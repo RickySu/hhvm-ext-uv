@@ -8,25 +8,6 @@
     } while (0)
 
 #define TIMEVAL_TO_DOUBLE(tv) (tv.tv_sec + tv.tv_usec * 1e-6)
-
-#define FETCH_RESOURCE_EXT(obj, resource_class, ctx, rs) ({\
-    auto __var__get = obj->o_get(rs, false, ctx); \
-    if(__var__get.isNull()) raise_error("resource is invalid."); \
-    __var__get.asCResRef().getTyped<resource_class>(); \
-    })
-
-#define FETCH_RESOURCE(obj, resource_class, ctx) FETCH_RESOURCE_EXT(obj, resource_class, ctx, s_internal_resource)
-    
-#define SET_RESOURCE_EXT(obj, resource, ctx, rs) \
-    obj->o_set(rs, resource, ctx)
-
-#define SET_RESOURCE(obj, resource, ctx) SET_RESOURCE_EXT(obj, resource, ctx, s_internal_resource)
-
-#ifdef NEWOBJ
-    #define MAKE_RESOURCE(n, type, x) Resource n(NEWOBJ(type(x)))
-#else
-    #define MAKE_RESOURCE(n, type, x) Resource n(newres<type>(x))
-#endif
     
 namespace HPHP
 {

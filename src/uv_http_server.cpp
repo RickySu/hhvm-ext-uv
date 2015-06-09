@@ -1,12 +1,17 @@
-#include "ext.h"
-#include <r3/r3.h>
-node *n = NULL;
+#include "uv_http_server.h"
+
 namespace HPHP {
+    
+    UVHttpServerData::~UVHttpServerData(){
+        if(n){
+            r3_tree_free(n);
+        }
+    }
+    
     static Variant HHVM_METHOD(UVHttpServer, _R3RoutesAdd, const Array &routes) {
-        MAKE_RESOURCE(resource, R3ResourceData, routes.size());
-        SET_RESOURCE(this_, resource, s_uvhttpserver);
-        R3ResourceData *resource_data = FETCH_RESOURCE(this_, R3ResourceData, s_uvhttpserver);
-        node *n = resource_data->getR3ResourceData();
+        auto* data = Native::data<UVHttpServerData>(this_);
+        node *n = data->create(routes.size());
+
         for (ArrayIter iter(routes); iter; ++iter) {
             Variant key(iter.first());
             String pattern = routes.rvalAt(key).toArray().rvalAt(0).toString();
@@ -23,8 +28,8 @@ namespace HPHP {
     }
     
     static Array HHVM_METHOD(UVHttpServer, _R3Match, const String &uri, int64_t method) {
-        R3ResourceData *resource_data = FETCH_RESOURCE(this_, R3ResourceData, s_uvhttpserver);
-        node *n = resource_data->getR3ResourceData();
+        auto* data = Native::data<UVHttpServerData>(this_);
+        node *n = data->getNode();
         Array ret;
 
         match_entry * entry = match_entry_create(uri.c_str());        
@@ -47,5 +52,6 @@ namespace HPHP {
     void uvExtension::_initUVHttpServerClass() {
         HHVM_ME(UVHttpServer, _R3RoutesAdd);
         HHVM_ME(UVHttpServer, _R3Match);
+        Native::registerNativeDataInfo<UVHttpServerData>(s_uvhttpserver.get());
     }
 }

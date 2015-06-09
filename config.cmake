@@ -18,8 +18,6 @@ include_directories(${LIBUV_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR})
 set(LIBUV_LIBRARIES ${LIBUV_LIB}/libuv.a ${R3_LIB}/libr3.a)
 
 HHVM_EXTENSION(uv
-    src/resource/InternalResourceData.cpp
-    src/resource/R3ResourceData.cpp
     src/ext.cpp
     src/uv_util.cpp
     src/uv_loop.cpp

@@ -1,11 +1,10 @@
 #ifndef EXT_H_
 #define EXT_H_
 #include "hhvm_include.h"
-#include "resource/InternalResourceData.h"
-#include "resource/R3ResourceData.h"
+#include <uv.h>
 #include "common.h"
 #include "util.h"
-#include <uv.h>
+
 
 namespace HPHP
 {

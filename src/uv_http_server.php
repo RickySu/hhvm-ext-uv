@@ -1,4 +1,5 @@
 <?hh
+<<__NativeData("UVHttpServer")>>
 class UVHttpServer
 {
     const METHOD_GET = 2;
@@ -9,7 +10,6 @@ class UVHttpServer
     const METHOD_HEAD = 64;
     const METHOD_OPTIONS = 128;
 
-    private ?resource $_rs = null;
     private ?UVTcp $socket = null;
     protected array $routes = [];
     protected ?mixed $defaultCallback = null;
