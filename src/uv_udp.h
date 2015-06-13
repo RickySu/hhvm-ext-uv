@@ -11,8 +11,6 @@ namespace HPHP {
 
     typedef struct uv_udp_ext_s:public uv_udp_t{
         uint flag;
-        uv_connect_t connect_req;
-        uv_shutdown_t shutdown_req;
         ObjectData *udp_object_data;
         StringData *sockAddr;
         int sockPort;
