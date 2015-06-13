@@ -139,7 +139,8 @@ namespace HPHP {
             data->recvCallback = onRecvCallback;
             data->sendCallback = onSendCallback;
             data->errorCallback = onErrorCallback;
-            data->udp_handle->flag |= (UV_UDP_HANDLE_START|UV_UDP_READ_START);
+            data->udp_handle->flag |= (UV_UDP_HANDLE_START|UV_UDP_READ_START|UV_UDP_HANDLE_INTERNAL_REF);
+            this_->incRefCount();
         }
         return ret;
     }
