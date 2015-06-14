@@ -38,6 +38,10 @@ namespace HPHP {
         return uv_loop_alive(uv_default_loop());
     }
     
+    static void HHVM_METHOD(UVLoop, stop) {
+        uv_stop(uv_default_loop());
+    }
+    
     static void HHVM_METHOD(UVLoop, updateTime) {
         uv_update_time(uv_default_loop());
     }
@@ -60,6 +64,7 @@ namespace HPHP {
         REGISTER_UV_LOOP_CONSTANT(RUN_NOWAIT);
         
         HHVM_ME(UVLoop, run);
+        HHVM_ME(UVLoop, stop);
         HHVM_ME(UVLoop, alive);
         HHVM_ME(UVLoop, updateTime);
         HHVM_ME(UVLoop, now);

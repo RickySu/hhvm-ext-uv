@@ -13,6 +13,7 @@ class UVLoop
     
     final private function __construct():void {}
     <<__Native>> function run(int $option = self::RUN_DEFAULT):void;
+    <<__Native>> function stop():void;
     <<__Native>> function alive():int;
     <<__Native>> function updateTime():void;
     <<__Native>> function now():int;

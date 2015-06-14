@@ -168,7 +168,7 @@ namespace HPHP {
             return NULL;
         }
         client_tcp_handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
-        return client;    
+        return client;
     }
     
     static void HHVM_METHOD(UVTcp, close) {
