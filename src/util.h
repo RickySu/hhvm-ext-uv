@@ -35,18 +35,6 @@ namespace HPHP
         return makeObject(String(ClassName), Array::Create(), init);
     }
 
-    ALWAYS_INLINE int resource_to_fd(const Resource &fd){
-        File *file = fd.getTyped<File>();
-        if(file->valid()){
-            return file->fd();
-        }
-        Socket *sock = fd.getTyped<Socket>();
-        if(sock->valid()){
-            return sock->fd();
-        }
-        return -1;
-    }
-
     ALWAYS_INLINE StringData *sock_addr(struct sockaddr *addr) {
         struct sockaddr_in addr_in = *(struct sockaddr_in *) addr;
         char ip[20];
