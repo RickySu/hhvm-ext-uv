@@ -8,7 +8,6 @@
 #define UV_TCP_READ_START (1<<2)
 #define UV_TCP_CLOSING_START (1<<3)
 #define UV_TCP_WRITE_CALLBACK_ENABLE (1<<4)
-#define UV_TCP_CONNECTED (1<<5)
 
 #define releaseObjectData(o) if(o != NULL) { \
     o->decRefAndRelease(); \

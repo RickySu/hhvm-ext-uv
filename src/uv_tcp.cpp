@@ -99,7 +99,10 @@ namespace HPHP {
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
         auto callback = data->connectCallback;
-        tcp_handle->flag |= UV_TCP_CONNECTED;
+        tcp_handle->flag |= UV_TCP_HANDLE_START;
+        if(uv_read_start((uv_stream_t *) data->tcp_handle, alloc_cb, (uv_read_cb) read_cb)){
+            return;
+        }
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status));
         }
@@ -168,7 +171,11 @@ namespace HPHP {
         if(uv_accept((uv_stream_t *) server_tcp_handle, (uv_stream_t *) client_tcp_handle)) {
             return NULL;
         }
-        client_tcp_handle->flag |= (UV_TCP_HANDLE_INTERNAL_REF|UV_TCP_CONNECTED);
+        if(uv_read_start((uv_stream_t *) client_tcp_handle, alloc_cb, (uv_read_cb) read_cb)){
+            client->decRefAndRelease();
+            return NULL;
+        }
+        client_tcp_handle->flag |= (UV_TCP_HANDLE_INTERNAL_REF|UV_TCP_HANDLE_START);
         return client;
     }
     
@@ -178,19 +185,12 @@ namespace HPHP {
         tcp_close_socket(data->tcp_handle);
     }
     
-    static int64_t HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
-        int64_t ret;
+    static void HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
         auto* data = Native::data<UVTcpData>(this_);
-        if(!(data->tcp_handle->flag & UV_TCP_CONNECTED)){
-            return -1;
-        }
-        if((ret = uv_read_start((uv_stream_t *) data->tcp_handle, alloc_cb, (uv_read_cb) read_cb)) == 0){
-            data->readCallback = onReadCallback;
-            data->writeCallback = onWriteCallback;
-            data->errorCallback = onErrorCallback;
-            data->tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START|UV_TCP_WRITE_CALLBACK_ENABLE);
-        }
-        return ret;
+        data->readCallback = onReadCallback;
+        data->writeCallback = onWriteCallback;
+        data->errorCallback = onErrorCallback;
+        data->tcp_handle->flag |= (UV_TCP_READ_START|UV_TCP_WRITE_CALLBACK_ENABLE);        
     }
     
     static int64_t HHVM_METHOD(UVTcp, write, const String &message) {

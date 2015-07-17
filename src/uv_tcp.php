@@ -9,7 +9,7 @@ class UVTcp
     <<__Native>> function shutdown(mixed $onShutdownCallback):int;
     <<__Native>> function accept(): UVTcp;
     <<__Native>> function close(): void;
-    <<__Native>> function setCallback(mixed $onRead, mixed $onWrite, mixed $onError):int;
+    <<__Native>> function setCallback(mixed $onRead, mixed $onWrite, mixed $onError):void;
     <<__Native>> function write(string $buf): int;
     <<__Native>> function getSockname(): string;
     <<__Native>> function getPeername(): string;
