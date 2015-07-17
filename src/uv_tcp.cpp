@@ -99,9 +99,10 @@ namespace HPHP {
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
         auto callback = data->connectCallback;
+        tcp_handle->flag |= UV_TCP_CONNECTED;
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status));
-        }        
+        }
     }
     
     static void shutdown_cb(uv_shutdown_t* req, int status) {
@@ -153,7 +154,7 @@ namespace HPHP {
         return ret;
     }
     
-    static Object HHVM_METHOD(UVTcp, accept) {        
+    static Object HHVM_METHOD(UVTcp, accept) { 
         return make_accepted_uv_tcp_object(this_, "UVTcp");
     }
     
@@ -167,7 +168,7 @@ namespace HPHP {
         if(uv_accept((uv_stream_t *) server_tcp_handle, (uv_stream_t *) client_tcp_handle)) {
             return NULL;
         }
-        client_tcp_handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
+        client_tcp_handle->flag |= (UV_TCP_HANDLE_INTERNAL_REF|UV_TCP_CONNECTED);
         return client;
     }
     
@@ -180,6 +181,9 @@ namespace HPHP {
     static int64_t HHVM_METHOD(UVTcp, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
         int64_t ret;
         auto* data = Native::data<UVTcpData>(this_);
+        if(!(data->tcp_handle->flag & UV_TCP_CONNECTED)){
+            return -1;
+        }
         if((ret = uv_read_start((uv_stream_t *) data->tcp_handle, alloc_cb, (uv_read_cb) read_cb)) == 0){
             data->readCallback = onReadCallback;
             data->writeCallback = onWriteCallback;
