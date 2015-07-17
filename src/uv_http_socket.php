@@ -41,7 +41,6 @@ class UVHttpSocket
 
     function __construct(UVTcp $client, ?callable $onRequest):void
     {
-        print_r($client);
         $client->customData = $this;
         $this->client = $client;
         $this->initCallback();
