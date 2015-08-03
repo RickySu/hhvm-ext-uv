@@ -60,11 +60,12 @@ namespace HPHP {
     
     static int64_t HHVM_METHOD(UVResolver, getaddrinfo, const String &node, const Variant &service, const Variant &callback) {
         auto* data = Native::data<UVResolverData>(this_);
+        auto* loop_data = getLoopData(this_);
         uv_getaddrinfo_ext_t *getaddrinfo = new uv_getaddrinfo_ext_t();
         getaddrinfo->resolver_object_data = this_;
         getaddrinfo->resolver_object_data->incRefCount();
         data->addrinfoCallback = callback;
-        int ret = uv_getaddrinfo(uv_default_loop(), getaddrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, node.c_str(), service.toString().c_str(), NULL);
+        int ret = uv_getaddrinfo(loop_data->loop, getaddrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, node.c_str(), service.toString().c_str(), NULL);
         if(ret != 0){
             RELEASE_INFO(getaddrinfo);
         }
@@ -73,6 +74,7 @@ namespace HPHP {
     
     static int64_t HHVM_METHOD(UVResolver, getnameinfo, const String &addr, const Variant &callback) {
         auto* data = Native::data<UVResolverData>(this_);
+        auto* loop_data = getLoopData(this_);
         int64_t ret;
         static struct sockaddr_in addr4;
         
@@ -85,7 +87,7 @@ namespace HPHP {
         getnameinfo->resolver_object_data->incRefCount();
         data->nameinfoCallback = callback;
         
-        if((ret = uv_getnameinfo(uv_default_loop(), getnameinfo, (uv_getnameinfo_cb) on_nameinfo_resolved, (const struct sockaddr*) &addr4, 0)) != 0) {
+        if((ret = uv_getnameinfo(loop_data->loop, getnameinfo, (uv_getnameinfo_cb) on_nameinfo_resolved, (const struct sockaddr*) &addr4, 0)) != 0) {
             RELEASE_INFO(getnameinfo);
         }
         

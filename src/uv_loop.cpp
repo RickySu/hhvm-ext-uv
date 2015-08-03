@@ -11,6 +11,15 @@
 
 namespace HPHP {
 
+UVLoopData::UVLoopData(){
+    loop = new uv_loop_t();
+    uv_loop_init(loop);
+}
+UVLoopData::~UVLoopData() {
+    uv_loop_close(loop);
+    delete loop;
+}
+
 #if HHVM_API_VERSION < 20140702L
     using JIT::VMRegAnchor;
 #endif
@@ -18,6 +27,7 @@ namespace HPHP {
     static void HHVM_METHOD(UVLoop, run, int64_t option) {
         uv_run_mode mode;
         VMRegAnchor _;
+        auto* data = Native::data<UVLoopData>(this_);
         switch(option){
             case RUN_DEFAULT:
                 mode = UV_RUN_DEFAULT;
@@ -31,31 +41,37 @@ namespace HPHP {
             default:
                 mode = UV_RUN_DEFAULT;
         }
-        uv_run(uv_default_loop(), mode);
+        uv_run(data->loop, mode);
     }
     
     static int64_t HHVM_METHOD(UVLoop, alive) {
-        return uv_loop_alive(uv_default_loop());
+        auto* data = Native::data<UVLoopData>(this_);
+        return uv_loop_alive(data->loop);
     }
     
     static void HHVM_METHOD(UVLoop, stop) {
-        uv_stop(uv_default_loop());
+        auto* data = Native::data<UVLoopData>(this_);
+        uv_stop(data->loop);
     }
     
     static void HHVM_METHOD(UVLoop, updateTime) {
-        uv_update_time(uv_default_loop());
+        auto* data = Native::data<UVLoopData>(this_);
+        uv_update_time(data->loop);
     }
     
     static int64_t HHVM_METHOD(UVLoop, now) {
-        return uv_now(uv_default_loop());
+        auto* data = Native::data<UVLoopData>(this_);
+        return uv_now(data->loop);
     }
     
     static int64_t HHVM_METHOD(UVLoop, backendFd) {
-        return uv_backend_fd(uv_default_loop());
+        auto* data = Native::data<UVLoopData>(this_);
+        return uv_backend_fd(data->loop);
     }
     
     static int64_t HHVM_METHOD(UVLoop, backendTimeout) {
-        return uv_backend_timeout(uv_default_loop());
+        auto* data = Native::data<UVLoopData>(this_);
+        return uv_backend_timeout(data->loop);
     }    
     
     void uvExtension::_initUVLoopClass() {
@@ -70,5 +86,6 @@ namespace HPHP {
         HHVM_ME(UVLoop, now);
         HHVM_ME(UVLoop, backendFd);
         HHVM_ME(UVLoop, backendTimeout);
+        Native::registerNativeDataInfo<UVLoopData>(s_uvloop.get());
     }
 }

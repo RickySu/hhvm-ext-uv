@@ -1,16 +1,16 @@
 <?php
 require __DIR__ . '/../test-tools.php';
-$resolver = new UVResolver();
+$loop = new UVLoop();
 $tickonece = [];
 $tick = [];
 
 $time = microtime(true);
-$timerOnece = new UVTimer();
+$timerOnece = new UVTimer($loop);
 $timerOnece->start(function($timer)use(&$tickonece, $time){
     $tickonece[] = floor((microtime(true)-$time)*10);
 }, 500);
 
-$timer = new UVTimer();
+$timer = new UVTimer($loop);
 $timer->start(function($timer)use(&$tick, $time){
     $tick[] = floor((microtime(true)-$time)*10);
     if(count($tick)>5){
@@ -18,7 +18,7 @@ $timer->start(function($timer)use(&$tick, $time){
     }
 }, 500, 500);
 
-UVLoop::defaultLoop()->run();
+$loop->run();
 $timerOnece->stop();
 $timerOnece = null;
 $timer = null;

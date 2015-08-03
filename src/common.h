@@ -4,6 +4,7 @@ namespace HPHP
 {
     const StaticString
         s_internal_resource("_rs"),
+        s_internal_loop("loop"),
         s_uvloop("UVLoop"),
         s_uvsignal("UVSignal"),
         s_uvtcp("UVTcp"),

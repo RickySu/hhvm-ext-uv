@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define	UTIL_H
 
+#include "uv_loop_data.h"
+
 #define TIMEVAL_SET(tv, t) \
     do {                                             \
         tv.tv_sec  = (long) t;                       \
@@ -8,6 +10,21 @@
     } while (0)
 
 #define TIMEVAL_TO_DOUBLE(tv) (tv.tv_sec + tv.tv_usec * 1e-6)
+
+
+
+#define FETCH_LOOP_EXT(obj, resource_class, ctx, rs) ({\
+    auto __var__get = obj->o_get(rs, false, ctx); \
+    if(__var__get.isNull()) raise_error("resource is invalid."); \
+        __var__get.asCResRef().getTyped<resource_class>(); \
+    })
+                
+#define FETCH_LOOP(obj, resource_class, ctx) FETCH_LOOP_EXT(obj, resource_class, ctx, s_internal_loop)
+
+#define SET_LOOP_EXT(obj, resource, ctx, rs) \
+    obj->o_set(rs, resource, ctx)
+                        
+#define SET_LOOP(obj, resource, ctx) SET_LOOP_EXT(obj, resource, ctx, s_internal_loop)
     
 namespace HPHP
 {
@@ -53,7 +70,13 @@ namespace HPHP
     
     ALWAYS_INLINE ObjectData* getThisObjectData(ObjectData *objdata){
         return objdata;
-    }    
+    }
+    
+    ALWAYS_INLINE UVLoopData* getLoopData(ObjectData *objectdata){
+        auto loop = objectdata->o_get("loop", false, s_uvresolver).toObject();
+        return Native::data<UVLoopData>(loop);
+    }
+    
 }
 
 #endif	/* UTIL_H */
