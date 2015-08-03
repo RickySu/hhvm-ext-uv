@@ -98,8 +98,10 @@ namespace HPHP {
        releaseHandle((uv_udp_ext_t *) handle);    
     }
     
-    static void HHVM_METHOD(UVUdp, __construct) {
-        initUVUdpObject(this_, uv_default_loop());
+    static void HHVM_METHOD(UVUdp, __construct, const Object &loop) {
+        auto* loop_data = Native::data<UVLoopData>(loop);
+        SET_LOOP(this_, loop, s_uvudp);
+        initUVUdpObject(this_, loop_data->loop);
     }
     
     static void HHVM_METHOD(UVUdp, __destruct) {

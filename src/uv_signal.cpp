@@ -25,11 +25,13 @@ namespace HPHP {
         vm_call_user_func(data->callback, make_packed_array(signal_handle->signal_object_data, signo));
     }
     
-    static void HHVM_METHOD(UVSignal, __construct) {
+    static void HHVM_METHOD(UVSignal, __construct, const Object &loop) {
+        auto* loop_data = Native::data<UVLoopData>(loop);
         auto* data = Native::data<UVNativeData>(this_);
+        SET_LOOP(this_, loop, s_uvsignal);
         data->resource_handle = (void *) new uv_signal_ext_t();
         uv_signal_ext_t *signal_handle = fetchResource(data);
-        uv_signal_init(uv_default_loop(), signal_handle);
+        uv_signal_init(loop_data->loop, signal_handle);
         signal_handle->start = false;
         signal_handle->signal_object_data = NULL;
     }

@@ -102,10 +102,12 @@ namespace HPHP {
         delete buf->base;
     }
     
-    static void HHVM_METHOD(UVSSL, __construct, int64_t method, int64_t nContexts){
+    static void HHVM_METHOD(UVSSL, __construct, const Object &loop, int64_t method, int64_t nContexts){
         check_ssl_support();
+        auto* loop_data = Native::data<UVLoopData>(loop);
         auto* data = Native::data<UVTcpData>(this_);
-        initUVTcpObject(this_, uv_default_loop(), new uv_ssl_ext_t());        
+        SET_LOOP(this_, loop, s_uvtcp);
+        initUVTcpObject(this_, loop_data->loop, new uv_ssl_ext_t());        
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
         initSSLHandle(ssl_handle);
         switch(method){

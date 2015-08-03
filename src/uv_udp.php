@@ -2,7 +2,8 @@
 <<__NativeData("UVUdp")>>
 class UVUdp
 {
-    <<__Native>> function __construct(): void;
+    private ?UVLoop $loop = null;
+    <<__Native>> function __construct(UVLoop $loop): void;
     <<__Native>> function __destruct(): void;
     <<__Native>> function bind(string $host, int $port): int;
     <<__Native>> function close(): void;

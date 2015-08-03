@@ -125,8 +125,10 @@ namespace HPHP {
         }
     }
             
-    void HHVM_METHOD(UVTcp, __construct) {
-        initUVTcpObject(this_, uv_default_loop());
+    void HHVM_METHOD(UVTcp, __construct, const Object &loop) {
+        auto* loop_data = Native::data<UVLoopData>(loop);
+        SET_LOOP(this_, loop, s_uvtcp);
+        initUVTcpObject(this_, loop_data->loop);
     }
     
     void HHVM_METHOD(UVTcp, __destruct) {

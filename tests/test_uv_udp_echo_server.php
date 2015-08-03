@@ -29,8 +29,8 @@ function sendCallback($server, $clientIP, $clientPort, $status){
 function errorCallback(){
 }
 
-$loop = UVLoop::defaultLoop();
-$server = new UVUdp();
+$loop = new UVLoop();
+$server = new UVUdp($loop);
 Equal(0, $server->bind($host, $port), "Server Bind");
 Equal("$host:$port", "{$server->getSockname()}:{$server->getSockport()}", "getSockname() getSockPort()");
 Equal(0, $server->setCallback('recvCallback', 'sendCallback', 'errorCallback'), "setCallback");

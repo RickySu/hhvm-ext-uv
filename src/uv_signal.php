@@ -2,7 +2,8 @@
 <<__NativeData("UVSignal")>>
 class UVSignal
 {
-    <<__Native>> function __construct():void;
+    private ?UVLoop $loop = null;
+    <<__Native>> function __construct(UVLoop $loop):void;
     <<__Native>> function start(mixed $cb, int $signo):int;
     <<__Native>> function stop():int;
     <<__Native>> function __destruct():void;

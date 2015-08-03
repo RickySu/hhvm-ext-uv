@@ -29,8 +29,8 @@ if($pid){
     exit;
 }
 
-$loop = UVLoop::defaultLoop();
-$server = new UVTcp();
+$loop = new UVLoop();
+$server = new UVTcp($loop);
 $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
     $client = $server->accept();

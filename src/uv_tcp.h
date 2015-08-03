@@ -36,7 +36,7 @@ namespace HPHP {
     int64_t tcp_write_raw(uv_stream_t * handle, const char *data, int64_t size);
     void tcp_close_cb(uv_handle_t* handle);
     void HHVM_METHOD(UVTcp, __destruct);
-    void HHVM_METHOD(UVTcp, __construct);
+    void HHVM_METHOD(UVTcp, __construct, const Object &loop);
     int64_t HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback);
     uv_tcp_ext_t *initUVTcpObject(ObjectData *objectData, uv_loop_t *loop);
     
