@@ -74,7 +74,7 @@ namespace HPHP
     
     ALWAYS_INLINE UVLoopData* getLoopData(ObjectData *objectdata){
         auto loop = objectdata->o_get("loop", false, s_uvresolver).toObject();
-        return Native::data<UVLoopData>(loop);
+        return Native::data<UVLoopData>(loop.get());
     }
     
 }

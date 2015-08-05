@@ -26,7 +26,7 @@ namespace HPHP {
     }
     
     static void HHVM_METHOD(UVTimer, __construct, const Object &loop) {
-        auto* loop_data = Native::data<UVLoopData>(loop);
+        auto* loop_data = Native::data<UVLoopData>(loop.get());
         auto* data = Native::data<UVNativeData>(this_);
         data->resource_handle = (void *) new uv_timer_ext_t();
         SET_LOOP(this_, loop, s_uvtimer);

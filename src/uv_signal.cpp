@@ -26,7 +26,7 @@ namespace HPHP {
     }
     
     static void HHVM_METHOD(UVSignal, __construct, const Object &loop) {
-        auto* loop_data = Native::data<UVLoopData>(loop);
+        auto* loop_data = Native::data<UVLoopData>(loop.get());
         auto* data = Native::data<UVNativeData>(this_);
         SET_LOOP(this_, loop, s_uvsignal);
         data->resource_handle = (void *) new uv_signal_ext_t();
