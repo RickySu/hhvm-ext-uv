@@ -3,23 +3,32 @@ require __DIR__ . '/../test-tools.php';
 $host = '127.0.0.1';
 $port = 8443;
 $pid = pcntl_fork();
+function createSSLSocketClient($host, $port){
+    $contextOptions = array(
+        'ssl' => array(
+            'verify_peer'   => false,
+        ),
+    );
+    $sslContext = stream_context_create($contextOptions);
+    $fp = stream_socket_client("ssl://$host:$port", $errno, $errstr, ini_get("default_socket_timeout"), STREAM_CLIENT_CONNECT, $sslContext);
+    return $fp;
+}
 if($pid){
     usleep(100000);    
-
-    $fp = stream_socket_client("ssl://$host:$port", $errno, $errstr);
+    $fp = createSSLSocketClient($host, $port);
     $randomData = sha1(rand());
     fwrite($fp, $randomData);
     Equal($randomData, fread($fp, 1000), "Echo Server");
     fclose($fp);
     
-    $fp = stream_socket_client("ssl://$host:$port", $errno, $errstr);
+    $fp = createSSLSocketClient($host, $port);
     fclose($fp);
     
-    $fp = stream_socket_client("ssl://$host:$port", $errno, $errstr);
+    $fp = createSSLSocketClient($host, $port);
     Equal('client closed', $a = fread($fp, 1000), "Client close Trigger");
     fclose($fp);
     
-    $fp = stream_socket_client("ssl://$host:$port", $errno, $errstr);
+    $fp = createSSLSocketClient($host, $port);
     fwrite($fp, '!close!');
     fclose($fp);
     
