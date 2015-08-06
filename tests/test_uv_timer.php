@@ -7,7 +7,7 @@ $tick = [];
 $time = microtime(true);
 $timerOnece = new UVTimer($loop);
 $timerOnece->start(function($timer)use(&$tickonece, $time){
-    $tickonece[] = floor((microtime(true)-$time)*10);
+    $tickonece[] = round((microtime(true)-$time)*10);
 }, 500);
 
 $timer = new UVTimer($loop);

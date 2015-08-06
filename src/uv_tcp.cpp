@@ -61,7 +61,7 @@ namespace HPHP {
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
         auto callback = data->writeCallback;
-        if((tcp_handle->flag & UV_TCP_WRITE_CALLBACK_ENABLE) && !callback.isNull()){
+        if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status, req->buf.len));
         }
         delete req->buf.base;
@@ -99,10 +99,11 @@ namespace HPHP {
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
         auto callback = data->connectCallback;
-        tcp_handle->flag |= UV_TCP_HANDLE_START;
+        
         if(uv_read_start((uv_stream_t *) data->tcp_handle, alloc_cb, (uv_read_cb) read_cb)){
             return;
         }
+        tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status));
         }
@@ -177,7 +178,7 @@ namespace HPHP {
             client->decRefAndRelease();
             return NULL;
         }
-        client_tcp_handle->flag |= (UV_TCP_HANDLE_INTERNAL_REF|UV_TCP_HANDLE_START);
+        client_tcp_handle->flag |= (UV_TCP_HANDLE_INTERNAL_REF|UV_TCP_HANDLE_START|UV_TCP_READ_START);
         return client;
     }
     
@@ -192,7 +193,6 @@ namespace HPHP {
         data->readCallback = onReadCallback;
         data->writeCallback = onWriteCallback;
         data->errorCallback = onErrorCallback;
-        data->tcp_handle->flag |= (UV_TCP_READ_START|UV_TCP_WRITE_CALLBACK_ENABLE);        
     }
     
     static int64_t HHVM_METHOD(UVTcp, write, const String &message) {

@@ -294,6 +294,7 @@ namespace HPHP {
         SSL_set_connect_state(ssl_handle->sslResource.ssl);
         SSL_connect(ssl_handle->sslResource.ssl);
         write_bio_to_socket(ssl_handle);
+        ssl_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, status));
         }    
