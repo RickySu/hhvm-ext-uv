@@ -4,7 +4,6 @@ class UVSSL extends UVTcp
     <<__Native>> function __construct(UVLoop $loop, int $sslMethod = self::SSL_METHOD_TLSV1, int $nContexts = 1):void;
     <<__Native>> function __destruct():void;
     <<__Native>> function accept():UVSSL;
-    <<__Native>> function setCallback(mixed $onRead, mixed $onWrite, mixed $onError):int;
     <<__Native>> function setSSLHandshakeCallback(mixed $callback):void;
     <<__Native>> function setSSLServerNameCallback(mixed $callback):void;
     <<__Native>> function write(string $buf): int;        

@@ -2,6 +2,15 @@
 
 namespace HPHP {
 
+    ALWAYS_INLINE void setSelfReference(uv_tcp_ext_t *handle)
+    {
+        if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
+            return;
+        }
+        handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
+        handle->tcp_object_data->incRefCount();
+    }
+
     UVTcpData::~UVTcpData()
     {
         connectCallback.releaseForSweep();
@@ -61,7 +70,7 @@ namespace HPHP {
         uv_tcp_ext_t *tcp_handle = (uv_tcp_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
         auto callback = data->writeCallback;
-        if(!callback.isNull()){
+        if(!callback.isNull() && (tcp_handle->flag & UV_TCP_WRITE_CALLBACK_ENABLE)){
             vm_call_user_func(callback, make_packed_array(tcp_handle->tcp_object_data, status, req->buf.len));
         }
         delete req->buf.base;
@@ -157,6 +166,7 @@ namespace HPHP {
         }
         data->connectCallback = onConnectCallback;
         data->tcp_handle->flag |= UV_TCP_HANDLE_START;
+        setSelfReference(data->tcp_handle);
         return ret;
     }
     
@@ -178,7 +188,7 @@ namespace HPHP {
             client->decRefAndRelease();
             return NULL;
         }
-        client_tcp_handle->flag |= (UV_TCP_HANDLE_INTERNAL_REF|UV_TCP_HANDLE_START|UV_TCP_READ_START);
+        client_tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         return client;
     }
     
@@ -193,10 +203,12 @@ namespace HPHP {
         data->readCallback = onReadCallback;
         data->writeCallback = onWriteCallback;
         data->errorCallback = onErrorCallback;
+        setSelfReference(data->tcp_handle);
     }
     
     static int64_t HHVM_METHOD(UVTcp, write, const String &message) {
         auto* data = Native::data<UVTcpData>(this_);
+        data->tcp_handle->flag |= UV_TCP_WRITE_CALLBACK_ENABLE;
         return tcp_write_raw((uv_stream_t *) data->tcp_handle, message.data(), message.size());
     }
     
@@ -295,7 +307,7 @@ namespace HPHP {
         }
         
         data->connectCallback = onConnectCallback;
-        
+        setSelfReference(data->tcp_handle);
         data->tcp_handle->flag |= UV_TCP_HANDLE_START;
         return ret;
     }
@@ -308,7 +320,7 @@ namespace HPHP {
         if((ret = uv_shutdown(&data->tcp_handle->shutdown_req, (uv_stream_t *) data->tcp_handle, shutdown_cb)) != 0){
             return ret;
         }
-
+        setSelfReference(data->tcp_handle);
         data->tcp_handle->flag |= UV_TCP_HANDLE_START;
         return ret;
     }

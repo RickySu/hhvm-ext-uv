@@ -33,7 +33,7 @@ namespace HPHP {
     }
 
     int64_t write_bio_to_socket(uv_ssl_ext_t *ssl_handle){
-        char buf[1024];
+        char buf[512];
         int hasread, ret;
         while(true){
             hasread  = BIO_read(ssl_handle->sslResource.write_bio, buf, sizeof(buf));
@@ -247,16 +247,7 @@ namespace HPHP {
         SSL_set_bio(ssl_handle->sslResource.ssl, ssl_handle->sslResource.read_bio, ssl_handle->sslResource.write_bio);
         SSL_set_accept_state(ssl_handle->sslResource.ssl);
         write_bio_to_socket(ssl_handle);
-        ssl_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         return objectData;
-    }
-
-    static int64_t HHVM_METHOD(UVSSL, setCallback, const Variant &onReadCallback, const Variant &onWriteCallback, const Variant &onErrorCallback) {
-        auto* data = Native::data<UVTcpData>(this_);
-        data->readCallback = onReadCallback;
-        data->writeCallback = onWriteCallback;
-        data->errorCallback = onErrorCallback;
-        return 0;
     }
     
     static void HHVM_METHOD(UVSSL, setSSLHandshakeCallback, const Variant &callback) {
@@ -327,7 +318,6 @@ namespace HPHP {
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1_2);
         
         HHVM_ME(UVSSL, accept);
-        HHVM_ME(UVSSL, setCallback);
         HHVM_ME(UVSSL, write);
         HHVM_ME(UVSSL, __construct);
         HHVM_ME(UVSSL, __destruct);
