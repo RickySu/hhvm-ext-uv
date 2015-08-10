@@ -84,8 +84,10 @@ namespace HPHP {
                 if(size > 0){
                     read_buf_index+=size;
                 }
-                if((size <= 0 || read_buf_index >= sizeof(read_buf)) && !readCallback.isNull()){
-                    vm_call_user_func(readCallback, make_packed_array(ssl_handle->tcp_object_data, StringData::Make(read_buf, read_buf_index, CopyString)));
+                if(size <= 0 || read_buf_index >= sizeof(read_buf)){
+                    if(!readCallback.isNull()){
+                        vm_call_user_func(readCallback, make_packed_array(ssl_handle->tcp_object_data, StringData::Make(read_buf, read_buf_index, CopyString)));
+                    }
                     read_buf_index = 0;
                 }
                 if(size <= 0){
