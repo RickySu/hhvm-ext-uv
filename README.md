@@ -36,24 +36,11 @@ with high performance asynchronous I/O.
 Example
 --------------------
 
-```php
-<?php
-// Simple Web Server
-$server = new UVHttpServer('127.0.0.1', 8080);
-$server
-->onRequest('/post/{id:\\d+}/{foo}', function(UVHttpSocket $client, $id, $foo){
-    $client->sendReply("match /post/$id/$foo");
-})
-->onDefaultRequest(function(UVHttpSocket $client){
-    $client->sendReply("hello world");
-})
-->start();
-UVLoop::defaultLoop()->run();  //run event loop.
-```
 
 ```php
 // TCP Echo Server
-$server = new UVTcp();
+$loop = new UVLoop();
+$server = new UVTcp($loop);
 $server->listen($host, $port, function($server){
     $client = $server->accept();
     $client->setCallback(function($client, $recv){
@@ -67,12 +54,13 @@ $server->listen($host, $port, function($server){
         $client->close();
     });
 });
-UVLoop::defaultLoop()->run();
+$loop->run();
 ```
 
 ```php
 //SSL Echo Server
-$server = new UVSSL();
+$loop = new UVLoop();
+$server = new UVSSL($loop);
 $server->setCert(file_get_contents("server.crt"));    //PEM format
 $server->setPrivateKey(file_get_contents("server.key"));  //PEM format
 $server->listen($host, $port, function($server){
@@ -92,13 +80,16 @@ $server->listen($host, $port, function($server){
         $client->close();
     });
 });
+$loop->run();
 ```
+
 [Server Name Indication(SNI)](http://en.wikipedia.org/wiki/Server_Name_Indication)
 
 ```php
 //SSL Echo Server with SNI support
 //SNI is an extension to the TLS 
-$server = new UVSSL(UVSSL::SSL_METHOD_TLSV1, 2); //with 2 certs
+$loop = new UVLoop();
+$server = new UVSSL($loop, UVSSL::SSL_METHOD_TLSV1, 2); //with 2 certs
 $server->setCert(file_get_contents("server0.crt"), 0);    //PEM format cert 0
 $server->setPrivateKey(file_get_contents("server0.key"), 0);  //PEM format cert 0
 $server->setCert(file_get_contents("server1.crt"), 1);    //PEM format cert 1
@@ -126,26 +117,7 @@ $server->listen($host, $port, function($server){
         $client->close();
     });
 });
-```
-
-```php
-<?php
-// Simple Https Web Server
-$ssl = new UVSSL();
-$ssl->setCertFile("server.crt");    //PEM format
-$ssl->setPrivateKeyFile("server.key");  //PEM format
-
-$server = new UVHttpServer('127.0.0.1', 8443);
-$server->setSocket($ssl);
-$server
-->onRequest('/post/{id:\\d+}/{foo}', function(UVHttpSocket $client, $id, $foo){
-    $client->sendReply("match /post/$id/$foo");
-})
-->onDefaultRequest(function(UVHttpSocket $client){
-    $client->sendReply("hello world");
-})
-->start();
-UVLoop::defaultLoop()->run();  //run event loop.
+$loop->run();
 ```
 
 ## benchmark
