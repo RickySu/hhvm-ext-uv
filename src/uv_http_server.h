@@ -12,6 +12,7 @@ namespace HPHP {
                 n = r3_tree_create(count);
                 return n;
             }
+            void sweep();
             ~UVHttpServerData();
             ALWAYS_INLINE node *getNode(){
                 return n;

@@ -3,6 +3,10 @@
 namespace HPHP {
     
     UVUdpData::~UVUdpData(){
+        sweep();
+    }
+    
+    void UVUdpData::sweep(){
         recvCallback.releaseForSweep();
         sendCallback.releaseForSweep();
         errorCallback.releaseForSweep();

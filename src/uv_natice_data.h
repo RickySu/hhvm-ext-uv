@@ -8,7 +8,8 @@ namespace HPHP {
         public:
             void *resource_handle = NULL;
             Variant callback;
-            ~UVNativeData();        
+            ~UVNativeData();
+            void sweep();
     };
 }
 

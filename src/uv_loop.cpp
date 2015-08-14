@@ -15,9 +15,12 @@ UVLoopData::UVLoopData(){
     loop = new uv_loop_t();
     uv_loop_init(loop);
 }
-UVLoopData::~UVLoopData() {
+void UVLoopData::sweep(){
     uv_loop_close(loop);
     delete loop;
+}
+UVLoopData::~UVLoopData() {
+    sweep();
 }
 
 #if HHVM_API_VERSION < 20140702L

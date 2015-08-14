@@ -8,6 +8,7 @@ namespace HPHP {
             uv_loop_t *loop = NULL;
             UVLoopData();
             ~UVLoopData();
+            void sweep();
     };    
 }
 

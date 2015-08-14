@@ -11,7 +11,10 @@ namespace HPHP {
         handle->tcp_object_data->incRefCount();
     }
 
-    UVTcpData::~UVTcpData()
+    UVTcpData::~UVTcpData(){
+        sweep();
+    }
+    void UVTcpData::sweep()
     {
         connectCallback.releaseForSweep();
         readCallback.releaseForSweep();

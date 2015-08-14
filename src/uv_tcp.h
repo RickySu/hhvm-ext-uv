@@ -65,6 +65,7 @@ namespace HPHP {
                 errorCallback.setNull();
                 shutdownCallback.setNull();
             }
+            void sweep();
             ~UVTcpData();
             void release();
     };    

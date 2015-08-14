@@ -33,6 +33,7 @@ namespace HPHP {
                 sendCallback.setNull();
                 errorCallback.setNull();
             }
+            void sweep();
             ~UVUdpData();
             void release();
     };    

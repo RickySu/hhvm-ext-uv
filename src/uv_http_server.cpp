@@ -3,6 +3,9 @@
 namespace HPHP {
     
     UVHttpServerData::~UVHttpServerData(){
+        sweep();
+    }
+    void UVHttpServerData::sweep(){
         if(n){
             r3_tree_free(n);
         }

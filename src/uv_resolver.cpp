@@ -20,7 +20,7 @@ namespace HPHP {
              uv_getnameinfo_ext_t *getnameinfo_resource = NULL;
              Variant addrinfoCallback;
              Variant nameinfoCallback;
-             ~UVResolverData(){
+             void sweep(){
                  addrinfoCallback.releaseForSweep();
                  nameinfoCallback.releaseForSweep();
                  if(getaddrinfo_resource){
@@ -29,6 +29,9 @@ namespace HPHP {
                  if(getnameinfo_resource){
                      delete getnameinfo_resource;
                  }
+             }
+             ~UVResolverData(){
+                 sweep();
              }
     };
 
