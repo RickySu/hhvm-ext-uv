@@ -249,7 +249,7 @@ namespace HPHP {
         SSL_set_bio(ssl_handle->sslResource.ssl, ssl_handle->sslResource.read_bio, ssl_handle->sslResource.write_bio);
         SSL_set_accept_state(ssl_handle->sslResource.ssl);
         write_bio_to_socket(ssl_handle);
-        return objectData;
+        return Object(objectData);
     }
     
     static void HHVM_METHOD(UVSSL, setSSLHandshakeCallback, const Variant &callback) {

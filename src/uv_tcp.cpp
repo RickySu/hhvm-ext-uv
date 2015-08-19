@@ -174,7 +174,7 @@ namespace HPHP {
     }
     
     static Object HHVM_METHOD(UVTcp, accept) { 
-        return make_accepted_uv_tcp_object(this_, "UVTcp");
+        return Object(make_accepted_uv_tcp_object(this_, StaticString("UVTcp")));
     }
     
     ObjectData *make_accepted_uv_tcp_object(ObjectData *objectData, const String &class_name, uv_tcp_ext_t *tcp_handler) {
@@ -239,7 +239,7 @@ namespace HPHP {
             data->tcp_handle->sockAddr->incRefCount();
         }
         
-        return data->tcp_handle->sockAddr;
+        return String(data->tcp_handle->sockAddr);
     }
 
     static String HHVM_METHOD(UVTcp, getPeername) {
@@ -258,7 +258,7 @@ namespace HPHP {
             data->tcp_handle->peerAddr->incRefCount();
         }
         
-        return data->tcp_handle->peerAddr;
+        return String(data->tcp_handle->peerAddr);
     }
     
     static int64_t HHVM_METHOD(UVTcp, getSockport) {

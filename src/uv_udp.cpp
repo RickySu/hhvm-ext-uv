@@ -166,7 +166,7 @@ namespace HPHP {
             data->udp_handle->sockAddr->incRefCount();
         }
         
-        return data->udp_handle->sockAddr;
+        return String(data->udp_handle->sockAddr);
     }
     
     static int64_t HHVM_METHOD(UVUdp, getSockport) {

@@ -7,11 +7,11 @@ namespace HPHP {
     }
     
     static String HHVM_STATIC_METHOD(UVUtil, errorMessage, int64_t err) {
-        return StringData::Make(uv_strerror(err));
+        return String(uv_strerror(err), CopyString);
     }    
     
     static String HHVM_STATIC_METHOD(UVUtil, versionString) {
-        return StringData::Make(uv_version_string());
+        return String(uv_version_string(), CopyString);
     }    
     
     void uvExtension::_initUVUtilClass() {
