@@ -14,13 +14,14 @@ namespace HPHP {
     UVTcpData::~UVTcpData(){
         sweep();
     }
+    
     void UVTcpData::sweep()
     {
-        connectCallback.releaseForSweep();
-        readCallback.releaseForSweep();
-        writeCallback.releaseForSweep();
-        errorCallback.releaseForSweep();
-        shutdownCallback.releaseForSweep();
+        connectCallback.unset();
+        readCallback.unset();
+        writeCallback.unset();
+        errorCallback.unset();
+        shutdownCallback.unset();
         release();
     }
     
