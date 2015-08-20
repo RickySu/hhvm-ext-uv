@@ -32,12 +32,11 @@ namespace HPHP
     ALWAYS_INLINE ObjectData *makeObject(const String &ClassName, const Array arg, bool init){
         Class* cls = Unit::lookupClass(ClassName.get());
         ObjectData* ret = ObjectData::newInstance(cls);
-        Object o(ret);
         if(init){
             TypedValue dummy;
             g_context->invokeFunc(&dummy, cls->getCtor(), arg, ret);
         }
-        return o.detach();
+        return ret;
     }
 
     ALWAYS_INLINE ObjectData *makeObject(const String &ClassName, bool init = true){

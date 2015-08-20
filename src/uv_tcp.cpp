@@ -191,6 +191,7 @@ namespace HPHP {
             client->decRefAndRelease();
             return NULL;
         }
+        client->decRefCount();
         client_tcp_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
         return client;
     }
