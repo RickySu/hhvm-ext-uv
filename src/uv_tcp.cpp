@@ -21,7 +21,21 @@ namespace HPHP {
         writeCallback.unset();
         errorCallback.unset();
         shutdownCallback.unset();
+
+        if(releaseHook){
+            releaseHook(this);
+        }
+
         release();
+
+        if(gcHook){
+            gcHook(this);
+        }
+
+        if(tcp_handle){
+            delete tcp_handle;
+            tcp_handle = NULL;
+        }
     }
     
     void UVTcpData::release()
@@ -46,18 +60,6 @@ namespace HPHP {
             handle->flag &= ~UV_TCP_HANDLE_INTERNAL_REF;
             ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
         }
-        
-        if(handle->sockPort != 0){
-            handle->sockPort = 0;
-            handle->sockAddr->decRefAndRelease();
-            handle->sockAddr = NULL;
-        }
-        
-        if(handle->peerPort != 0){
-            handle->peerPort = 0;
-            handle->peerAddr->decRefAndRelease();
-            handle->peerAddr = NULL;
-        }        
     }
     
     uv_tcp_ext_t *initUVTcpObject(ObjectData *objectData, uv_loop_t *loop, uv_tcp_ext_t *tcp_handler) {
@@ -140,14 +142,6 @@ namespace HPHP {
         auto* loop_data = Native::data<UVLoopData>(loop.get());
         SET_LOOP(this_, loop, s_uvtcp);
         initUVTcpObject(this_, loop_data->loop);
-    }
-    
-    void HHVM_METHOD(UVTcp, __destruct) {
-        auto* data = Native::data<UVTcpData>(this_);
-        data->release();
-        if(data->tcp_handle){
-            delete data->tcp_handle;
-        }
     }
     
     int64_t HHVM_METHOD(UVTcp, listen, const String &host, int64_t port, const Variant &onConnectCallback) {
@@ -236,10 +230,9 @@ namespace HPHP {
             }
             data->tcp_handle->sockAddr = sock_addr(&addr);
             data->tcp_handle->sockPort = sock_port(&addr);
-            data->tcp_handle->sockAddr->incRefCount();
         }
         
-        return String(data->tcp_handle->sockAddr);
+        return data->tcp_handle->sockAddr;
     }
 
     static String HHVM_METHOD(UVTcp, getPeername) {
@@ -255,10 +248,9 @@ namespace HPHP {
             
             data->tcp_handle->peerAddr = sock_addr(&addr);
             data->tcp_handle->peerPort = sock_port(&addr);
-            data->tcp_handle->peerAddr->incRefCount();
         }
         
-        return String(data->tcp_handle->peerAddr);
+        return data->tcp_handle->peerAddr;
     }
     
     static int64_t HHVM_METHOD(UVTcp, getSockport) {
@@ -273,7 +265,6 @@ namespace HPHP {
             }
             data->tcp_handle->sockAddr = sock_addr(&addr);
             data->tcp_handle->sockPort = sock_port(&addr);
-            data->tcp_handle->sockAddr->incRefCount();
         }
         
         return data->tcp_handle->sockPort;
@@ -291,7 +282,6 @@ namespace HPHP {
             }
             data->tcp_handle->peerAddr = sock_addr(&addr);
             data->tcp_handle->peerPort = sock_port(&addr);
-            data->tcp_handle->peerAddr->incRefCount();
         }
         
         return data->tcp_handle->peerPort;
@@ -331,7 +321,6 @@ namespace HPHP {
     
     void uvExtension::_initUVTcpClass() {
         HHVM_ME(UVTcp, __construct);
-        HHVM_ME(UVTcp, __destruct);        
         HHVM_ME(UVTcp, listen);
         HHVM_ME(UVTcp, connect);
         HHVM_ME(UVTcp, accept);

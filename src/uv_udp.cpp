@@ -10,11 +10,14 @@ namespace HPHP {
         recvCallback.releaseForSweep();
         sendCallback.releaseForSweep();
         errorCallback.releaseForSweep();
+        release();
     }
     
     void UVUdpData::release(){
         if(udp_handle){
             releaseHandle(udp_handle);
+            delete udp_handle;
+            udp_handle = NULL;
         }
     }
 
@@ -32,12 +35,6 @@ namespace HPHP {
         if(handle->flag & UV_UDP_HANDLE_INTERNAL_REF){
             handle->flag &= ~UV_UDP_HANDLE_INTERNAL_REF;
             ((uv_udp_ext_t *) handle)->udp_object_data->decRefAndRelease();
-        }
-        
-        if(handle->sockPort != 0){
-            handle->sockPort = 0;
-            handle->sockAddr->decRefAndRelease();
-            handle->sockAddr = NULL;
         }
     }
     
@@ -108,14 +105,6 @@ namespace HPHP {
         initUVUdpObject(this_, loop_data->loop);
     }
     
-    static void HHVM_METHOD(UVUdp, __destruct) {
-        auto* data = Native::data<UVUdpData>(this_);
-        data->release();
-        if(data->udp_handle){
-            delete data->udp_handle;
-        }
-    }
-    
     static int64_t HHVM_METHOD(UVUdp, bind, const String &host, int64_t port) {
         int64_t ret;        
         struct sockaddr_in addr; 
@@ -163,10 +152,9 @@ namespace HPHP {
             }
             data->udp_handle->sockAddr = sock_addr(&addr);
             data->udp_handle->sockPort = sock_port(&addr);
-            data->udp_handle->sockAddr->incRefCount();
         }
         
-        return String(data->udp_handle->sockAddr);
+        return data->udp_handle->sockAddr;
     }
     
     static int64_t HHVM_METHOD(UVUdp, getSockport) {
@@ -181,7 +169,6 @@ namespace HPHP {
             }
             data->udp_handle->sockAddr = sock_addr(&addr);
             data->udp_handle->sockPort = sock_port(&addr);
-            data->udp_handle->sockAddr->incRefCount();
         }
         
         return data->udp_handle->sockPort;
@@ -203,7 +190,6 @@ namespace HPHP {
     
     void uvExtension::_initUVUdpClass() {
         HHVM_ME(UVUdp, __construct);
-        HHVM_ME(UVUdp, __destruct);
         HHVM_ME(UVUdp, bind);
         HHVM_ME(UVUdp, close);
         HHVM_ME(UVUdp, setCallback);

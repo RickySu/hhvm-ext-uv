@@ -10,6 +10,7 @@ if($pid){
     $randomData = sha1(rand());
     fwrite($fp, $randomData);
     $recv = fread($fp, strlen($randomData));
+    usleep(500000);
     Equal($randomData, $recv, "Client Echo Recv");
     fclose($fp);
     

@@ -22,8 +22,8 @@ namespace HPHP {
         uv_connect_t connect_req;
         uv_shutdown_t shutdown_req;
         ObjectData *tcp_object_data;
-        StringData *sockAddr;
-        StringData *peerAddr;
+        String sockAddr;
+        String peerAddr;
         int sockPort;
         int peerPort;
     } uv_tcp_ext_t;
@@ -58,12 +58,16 @@ namespace HPHP {
             Variant writeCallback;
             Variant errorCallback;
             Variant shutdownCallback;
+            void (*releaseHook)(UVTcpData *data);
+            void (*gcHook)(UVTcpData *data);
             UVTcpData(){
                 connectCallback.setNull();
                 readCallback.setNull();
                 writeCallback.setNull();
                 errorCallback.setNull();
                 shutdownCallback.setNull();
+                releaseHook = NULL;
+                gcHook = NULL;
             }
             void sweep();
             ~UVTcpData();

@@ -4,7 +4,6 @@ class UVTcp
 {
     private ?UVLoop $loop = null;
     <<__Native>> function __construct(UVLoop $loop):void;
-    <<__Native>> function __destruct():void;
     <<__Native>> function listen(string $host, int $port, mixed $onConnectCallback):int;
     <<__Native>> function connect(string $host, int $port, mixed $onConnectCallback):int;
     <<__Native>> function shutdown(mixed $onShutdownCallback):int;

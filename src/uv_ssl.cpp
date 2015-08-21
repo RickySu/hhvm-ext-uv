@@ -7,6 +7,31 @@
 #endif
 
 namespace HPHP {
+
+    static void releaseHook(UVTcpData *data){
+        uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
+        if(ssl_handle->sslResource.ctx){
+            if(ssl_handle->sslResource.ssl){
+                SSL_free(ssl_handle->sslResource.ssl);
+            }
+            for(int i=0;i<ssl_handle->sslResource.nctx;i++){
+                SSL_CTX_free(ssl_handle->sslResource.ctx[i]);
+            }
+            delete ssl_handle->sslResource.ctx;
+            ssl_handle->sslResource.ctx = NULL;
+        }
+        ssl_handle->sslHandshakeCallback.unset();
+        ssl_handle->sslServerNameCallback.unset();
+    }
+    
+    static void gcHook(UVTcpData *data){
+        uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
+        if(data->tcp_handle){
+            delete ssl_handle;
+            data->tcp_handle = NULL;
+        }
+    }
+    
     static int sni_cb(SSL *s, int *ad, void *arg) {
         Variant result;
         int64_t n;
@@ -112,6 +137,8 @@ namespace HPHP {
         initUVTcpObject(this_, loop_data->loop, new uv_ssl_ext_t());        
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
         initSSLHandle(ssl_handle);
+        data->releaseHook = releaseHook;
+        data->gcHook = gcHook;
         switch(method){
             case SSL_METHOD_SSLV2:
 #ifdef OPENSSL_NO_SSL2
@@ -154,33 +181,6 @@ namespace HPHP {
 #endif
     }
     
-    static void HHVM_METHOD(UVSSL, __destruct){
-        auto* data = Native::data<UVTcpData>(this_);
-        uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
-        if(ssl_handle->sslResource.ctx){
-        //use SSL_free instead
-/*
-            if(ssl->read_bio){
-                BIO_free(ssl->read_bio);                
-            }
-            if(ssl->write_bio){
-                BIO_free(ssl->write_bio);
-            }*/
-            if(ssl_handle->sslResource.ssl){
-                SSL_free(ssl_handle->sslResource.ssl);
-            }
-            for(int i=0;i<ssl_handle->sslResource.nctx;i++){
-                SSL_CTX_free(ssl_handle->sslResource.ctx[i]);
-            }
-            delete ssl_handle->sslResource.ctx;
-            ssl_handle->sslResource.ctx = NULL;
-        }
-        data->release();
-        ssl_handle->sslHandshakeCallback.releaseForSweep();
-        ssl_handle->sslServerNameCallback.releaseForSweep();
-        delete ssl_handle;
-    }
-
     static bool HHVM_METHOD(UVSSL, setCert, const String &cert, int64_t n){
         bool result;
         X509 *pcert;
@@ -322,7 +322,6 @@ namespace HPHP {
         HHVM_ME(UVSSL, accept);
         HHVM_ME(UVSSL, write);
         HHVM_ME(UVSSL, __construct);
-        HHVM_ME(UVSSL, __destruct);
         HHVM_ME(UVSSL, setCert);
         HHVM_ME(UVSSL, setPrivateKey);
         HHVM_ME(UVSSL, connect);

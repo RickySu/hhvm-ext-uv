@@ -12,7 +12,7 @@ namespace HPHP {
     typedef struct uv_udp_ext_s:public uv_udp_t{
         uint flag;
         ObjectData *udp_object_data;
-        StringData *sockAddr;
+        String sockAddr;
         int sockPort;
     } uv_udp_ext_t;
     

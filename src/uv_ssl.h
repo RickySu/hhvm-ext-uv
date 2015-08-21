@@ -37,7 +37,7 @@ namespace HPHP
     {
         handle->sslResource = {NULL, NULL, 0, NULL, NULL, NULL};
         handle->sslHandshakeCallback.setNull();
-        handle->sslServerNameCallback.setNull();        
+        handle->sslServerNameCallback.setNull();
     }
     
     ALWAYS_INLINE uv_ssl_ext_t *fetchSSLHandle(UVTcpData *data){
