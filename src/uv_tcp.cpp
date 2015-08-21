@@ -1,7 +1,6 @@
 #include "uv_tcp.h"
 
 namespace HPHP {
-
     ALWAYS_INLINE void setSelfReference(uv_tcp_ext_t *handle)
     {
         if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
@@ -88,16 +87,14 @@ namespace HPHP {
 
     static void read_cb(uv_tcp_ext_t *tcp_handle, ssize_t nread, const uv_buf_t* buf) {
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
-        auto readCallback = data->readCallback;
-        auto errorCallback = data->errorCallback;
         if(nread > 0){
-            if(!readCallback.isNull()){
-                vm_call_user_func(readCallback, make_packed_array(tcp_handle->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
+            if(!data->readCallback.isNull()){
+                vm_call_user_func(data->readCallback, make_packed_array(tcp_handle->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
             }
         }
         else if(nread < 0){
-            if(!errorCallback.isNull()){
-                vm_call_user_func(errorCallback, make_packed_array(tcp_handle->tcp_object_data, nread));
+            if(!data->errorCallback.isNull()){
+                vm_call_user_func(data->errorCallback, make_packed_array(tcp_handle->tcp_object_data, nread));
             }
             tcp_close_socket(tcp_handle);
         }
@@ -174,7 +171,7 @@ namespace HPHP {
         return ret;
     }
     
-    static Object HHVM_METHOD(UVTcp, accept) { 
+    static Object HHVM_METHOD(UVTcp, accept) {
         return Object(make_accepted_uv_tcp_object(this_, StaticString("UVTcp")));
     }
     
@@ -186,6 +183,7 @@ namespace HPHP {
         client = makeObject(class_name, false);
         client_tcp_handle = initUVTcpObject(client, server_tcp_handle->loop, tcp_handler);
         if(uv_accept((uv_stream_t *) server_tcp_handle, (uv_stream_t *) client_tcp_handle)) {
+            client->decRefAndRelease();
             return NULL;
         }
         if(uv_read_start((uv_stream_t *) client_tcp_handle, alloc_cb, (uv_read_cb) read_cb)){
