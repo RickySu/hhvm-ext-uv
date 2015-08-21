@@ -38,26 +38,24 @@ namespace HPHP {
     static void on_addrinfo_resolved(uv_getaddrinfo_ext_t *info, int status, struct addrinfo *res) {
         auto* data = Native::data<UVResolverData>(info->resolver_object_data);
         auto callback = data->addrinfoCallback;
-        StringData *addrString = NULL;
         char addr[17] = {'\0'};
         if(status == 0){        
             uv_ip4_name((struct sockaddr_in*) res->ai_addr, addr, 16);
-            addrString = StringData::Make(addr);
             uv_freeaddrinfo(res);
         }
-        vm_call_user_func(callback, make_packed_array(status, addrString));
+        vm_call_user_func(callback, make_packed_array(status, String(addr)));
         RELEASE_INFO(info);
     }
 
     static void on_nameinfo_resolved(uv_getnameinfo_ext_t *info, int status, const char *hostname, const char *service) {
         auto* data = Native::data<UVResolverData>(info->resolver_object_data);
         auto callback = data->nameinfoCallback;
-        StringData *hostnameString = NULL, *serviceString = NULL;
         if(status == 0){        
-            hostnameString = StringData::Make(hostname, CopyString);
-            serviceString = StringData::Make(service, CopyString);            
+            vm_call_user_func(callback, make_packed_array(status, String(hostname, CopyString), String(service, CopyString)));
         }
-        vm_call_user_func(callback, make_packed_array(status, hostnameString, serviceString));
+        else{
+            vm_call_user_func(callback, make_packed_array(status, NULL, NULL));
+        }
         RELEASE_INFO(info);
     }
     

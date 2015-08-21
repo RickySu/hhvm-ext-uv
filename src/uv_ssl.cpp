@@ -16,7 +16,7 @@ namespace HPHP {
         auto sslServerNameCallback = ssl_handle->sslServerNameCallback;
         const char *servername = SSL_get_servername(s, TLSEXT_NAMETYPE_host_name);
         if(servername != NULL && !sslServerNameCallback.isNull()){
-            result = vm_call_user_func(sslServerNameCallback, make_packed_array(StringData::Make(servername, CopyString)));
+            result = vm_call_user_func(sslServerNameCallback, make_packed_array(String(servername, CopyString)));
             if(result.isInteger()){
                 n = result.toInt64Val();
                 if(n>=0 && n<ssl_handle->sslResource.nctx){
@@ -86,7 +86,7 @@ namespace HPHP {
                 }
                 if(size <= 0 || read_buf_index >= sizeof(read_buf)){
                     if(!readCallback.isNull()){
-                        vm_call_user_func(readCallback, make_packed_array(ssl_handle->tcp_object_data, StringData::Make(read_buf, read_buf_index, CopyString)));
+                        vm_call_user_func(readCallback, make_packed_array(ssl_handle->tcp_object_data, String(read_buf, read_buf_index, CopyString)));
                     }
                     read_buf_index = 0;
                 }

@@ -89,7 +89,7 @@ namespace HPHP {
         auto* data = Native::data<UVTcpData>(tcp_handle->tcp_object_data);
         if(nread > 0){
             if(!data->readCallback.isNull()){
-                vm_call_user_func(data->readCallback, make_packed_array(tcp_handle->tcp_object_data, StringData::Make(buf->base, nread, CopyString)));
+                vm_call_user_func(data->readCallback, make_packed_array(tcp_handle->tcp_object_data, String(buf->base, nread, CopyString)));
             }
         }
         else if(nread < 0){

@@ -84,7 +84,7 @@ namespace HPHP {
                         udp_handle->udp_object_data,
                         sock_addr((struct sockaddr *) addr),
                         sock_port((struct sockaddr *) addr),
-                        StringData::Make(buf->base, nread, CopyString),
+                        String(buf->base, nread, CopyString),
                         (int64_t) flags
                     )
                 );
