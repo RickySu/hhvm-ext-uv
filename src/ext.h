@@ -21,7 +21,6 @@ namespace HPHP
                 _initUVUdpClass();
                 _initUVResolverClass();
                 _initUVTimerClass();
-                _initUVHttpServerClass();
                 _initUVSSLClass();
                 loadSystemlib();
             }
@@ -33,7 +32,6 @@ namespace HPHP
             void _initUVUdpClass();
             void _initUVResolverClass();
             void _initUVTimerClass();
-            void _initUVHttpServerClass();
             void _initUVSSLClass();
     };
 }
