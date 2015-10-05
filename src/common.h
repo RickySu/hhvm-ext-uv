@@ -11,6 +11,7 @@ namespace HPHP
         s_uvudp("UVUdp"),
         s_uvresolver("UVResolver"),
         s_uvtimer("UVTimer"),
+        s_uvidle("UVIdle"),
         s_uvssl("UVSSL")
     ;
 }

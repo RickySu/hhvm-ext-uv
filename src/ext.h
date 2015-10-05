@@ -22,6 +22,7 @@ namespace HPHP
                 _initUVResolverClass();
                 _initUVTimerClass();
                 _initUVSSLClass();
+                _initUVIdleClass();
                 loadSystemlib();
             }
         private:
@@ -33,6 +34,7 @@ namespace HPHP
             void _initUVResolverClass();
             void _initUVTimerClass();
             void _initUVSSLClass();
+            void _initUVIdleClass();
     };
 }
 #endif
