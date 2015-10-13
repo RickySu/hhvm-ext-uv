@@ -138,7 +138,15 @@ namespace HPHP {
         }
     }
             
-    void HHVM_METHOD(UVTcp, __construct, const Object &loop) {
+    void HHVM_METHOD(UVTcp, __construct, const Variant &v_loop) {
+        
+        if(v_loop.isNull()){
+            initUVTcpObject(this_, uv_default_loop());
+            return;
+        }
+        
+        Object loop = v_loop.toObject();
+        checkUVLoopInstance(loop, 1, s_uvtcp, StaticString("__construct"));
         auto* loop_data = Native::data<UVLoopData>(loop.get());
         SET_LOOP(this_, loop, s_uvtcp);
         initUVTcpObject(this_, loop_data->loop);

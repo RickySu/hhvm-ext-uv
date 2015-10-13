@@ -71,12 +71,12 @@ namespace HPHP
         return objdata;
     }
     
-    ALWAYS_INLINE UVLoopData* getLoopData(ObjectData *objectdata){
-        auto v_loop = objectdata->o_get("loop", false, s_uvresolver);
+    ALWAYS_INLINE UVLoopData* getLoopData(ObjectData *objectdata, const String class_name){
+        auto v_loop = objectdata->o_get("loop", false, class_name);
         if(v_loop.isNull()){
             return NULL;
         }
-        auto loop = objectdata->o_get("loop", false, s_uvresolver).toObject();
+        auto loop = objectdata->o_get("loop", false, class_name).toObject();
         return Native::data<UVLoopData>(loop.get());
     }
     

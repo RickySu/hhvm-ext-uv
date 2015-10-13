@@ -99,7 +99,14 @@ namespace HPHP {
        releaseHandle((uv_udp_ext_t *) handle);    
     }
     
-    static void HHVM_METHOD(UVUdp, __construct, const Object &loop) {
+    static void HHVM_METHOD(UVUdp, __construct, const Variant &v_loop) {
+        if(v_loop.isNull()){
+            initUVUdpObject(this_, uv_default_loop());
+            return;
+        }
+
+        Object loop = v_loop.toObject();
+        checkUVLoopInstance(loop, 1, s_uvudp, StaticString("__construct"));
         auto* loop_data = Native::data<UVLoopData>(loop.get());
         SET_LOOP(this_, loop, s_uvudp);
         initUVUdpObject(this_, loop_data->loop);

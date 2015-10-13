@@ -61,7 +61,7 @@ namespace HPHP {
     
     static int64_t HHVM_METHOD(UVResolver, getaddrinfo, const String &node, const Variant &service, const Variant &callback) {
         auto* data = Native::data<UVResolverData>(this_);
-        auto* loop_data = getLoopData(this_);
+        auto* loop_data = getLoopData(this_, s_uvresolver);
         uv_getaddrinfo_ext_t *getaddrinfo = new uv_getaddrinfo_ext_t();
         getaddrinfo->resolver_object_data = this_;
         getaddrinfo->resolver_object_data->incRefCount();
@@ -75,7 +75,7 @@ namespace HPHP {
     
     static int64_t HHVM_METHOD(UVResolver, getnameinfo, const String &addr, const Variant &callback) {
         auto* data = Native::data<UVResolverData>(this_);
-        auto* loop_data = getLoopData(this_);
+        auto* loop_data = getLoopData(this_, s_uvresolver);
         int64_t ret;
         static struct sockaddr_in addr4;
         

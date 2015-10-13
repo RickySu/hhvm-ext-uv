@@ -25,15 +25,23 @@ namespace HPHP {
          delete handle;
     }
     
-    static void HHVM_METHOD(UVTimer, __construct, const Object &loop) {
-        auto* loop_data = Native::data<UVLoopData>(loop.get());
+    static void HHVM_METHOD(UVTimer, __construct, const Variant &v_loop) {
         auto* data = Native::data<UVNativeData>(this_);
         data->resource_handle = (void *) new uv_timer_ext_t();
-        SET_LOOP(this_, loop, s_uvtimer);
         uv_timer_ext_t *timer_handle = fetchResource(data);
-        uv_timer_init(loop_data->loop, timer_handle);
         timer_handle->start = false;
         timer_handle->timer_object_data = NULL;
+        
+        if(v_loop.isNull()){
+            uv_timer_init(uv_default_loop(), timer_handle);
+            return;
+        }
+
+        Object loop = v_loop.toObject();
+        checkUVLoopInstance(loop, 1, s_uvtimer, StaticString("__construct"));
+        auto* loop_data = Native::data<UVLoopData>(loop.get());
+        SET_LOOP(this_, loop, s_uvtimer);        
+        uv_timer_init(loop_data->loop, timer_handle);        
     }
     
     static int64_t HHVM_METHOD(UVTimer, start, const Variant &timer_cb, int64_t start, int64_t repeat) {

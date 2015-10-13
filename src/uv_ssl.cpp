@@ -129,12 +129,19 @@ namespace HPHP {
         delete buf->base;
     }
     
-    static void HHVM_METHOD(UVSSL, __construct, const Object &loop, int64_t method, int64_t nContexts){
+    static void HHVM_METHOD(UVSSL, __construct, const Variant &v_loop, int64_t method, int64_t nContexts){
         check_ssl_support();
-        auto* loop_data = Native::data<UVLoopData>(loop.get());
         auto* data = Native::data<UVTcpData>(this_);
-        SET_LOOP(this_, loop, s_uvtcp);
-        initUVTcpObject(this_, loop_data->loop, new uv_ssl_ext_t());        
+        if(v_loop.isNull()){
+            initUVTcpObject(this_, uv_default_loop(), new uv_ssl_ext_t());
+        }
+        else{
+            Object loop = v_loop.toObject();
+            checkUVLoopInstance(loop, 1, s_uvssl, StaticString("__construct"));
+            auto* loop_data = Native::data<UVLoopData>(loop.get());
+            SET_LOOP(this_, loop, s_uvtcp);
+            initUVTcpObject(this_, loop_data->loop, new uv_ssl_ext_t());
+        }
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
         initSSLHandle(ssl_handle);
         data->releaseHook = releaseHook;
