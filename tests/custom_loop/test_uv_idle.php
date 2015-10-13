@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../test-tools.php';
+require __DIR__ . '/../../test-tools.php';
 
 $count = 0;
 $loop = new UVLoop();

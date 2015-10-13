@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../test-tools.php';
+require __DIR__ . '/../../test-tools.php';
 $host = '127.0.0.1';
 $port = 8443;
 $pid = pcntl_fork();
@@ -38,8 +38,8 @@ if($pid){
 
 $loop = new UVLoop();
 $server = new UVSSL($loop);
-$server->setCert(file_get_contents(__DIR__."/cert/server.crt"));
-$server->setPrivateKey(file_get_contents(__DIR__."/cert/server.key"));
+$server->setCert(file_get_contents(__DIR__."/../cert/server.crt"));
+$server->setPrivateKey(file_get_contents(__DIR__."/../cert/server.key"));
 $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
 

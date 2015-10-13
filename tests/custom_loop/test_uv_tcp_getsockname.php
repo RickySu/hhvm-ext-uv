@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../test-tools.php';
+require __DIR__ . '/../../test-tools.php';
 $host = '0.0.0.0';
 $port = 8889;
 $pid = pcntl_fork();

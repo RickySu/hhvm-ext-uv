@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../test-tools.php';
+require __DIR__ . '/../../test-tools.php';
 $pid = pcntl_fork();
 if($pid){
     usleep(100000);

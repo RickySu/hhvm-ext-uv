@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../test-tools.php';
+require __DIR__ . '/../../test-tools.php';
 $html = '';
 $host = gethostbyname('github.com');
 $loop = new UVLoop();

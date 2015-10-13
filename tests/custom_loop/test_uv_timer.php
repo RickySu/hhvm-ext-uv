@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../test-tools.php';
+require __DIR__ . '/../../test-tools.php';
 $loop = new UVLoop();
 $tickonece = [];
 $tick = [];
