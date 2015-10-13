@@ -1,0 +1,16 @@
+<?php
+require __DIR__ . '/../../test-tools.php';
+$pid = pcntl_fork();
+if($pid){
+    usleep(100000);
+    posix_kill($pid, SIGUSR1);
+    pcntl_waitpid($pid, $status);
+    exit;
+}
+
+$signal = new UVSignal();
+$signal->start(function($signal, $signo){
+    True(true, "UVSignal");
+    $signal->stop();
+}, SIGUSR1);
+UVLoop::defaultLoop()->run();
