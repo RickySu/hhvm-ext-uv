@@ -66,7 +66,7 @@ namespace HPHP {
         getaddrinfo->resolver_object_data = this_;
         getaddrinfo->resolver_object_data->incRefCount();
         data->addrinfoCallback = callback;
-        int ret = uv_getaddrinfo(loop_data->loop, getaddrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, node.c_str(), service.toString().c_str(), NULL);
+        int ret = uv_getaddrinfo(loop_data==NULL?uv_default_loop():loop_data->loop, getaddrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, node.c_str(), service.toString().c_str(), NULL);
         if(ret != 0){
             RELEASE_INFO(getaddrinfo);
         }
@@ -88,14 +88,25 @@ namespace HPHP {
         getnameinfo->resolver_object_data->incRefCount();
         data->nameinfoCallback = callback;
         
-        if((ret = uv_getnameinfo(loop_data->loop, getnameinfo, (uv_getnameinfo_cb) on_nameinfo_resolved, (const struct sockaddr*) &addr4, 0)) != 0) {
+        if((ret = uv_getnameinfo(loop_data==NULL?uv_default_loop():loop_data->loop, getnameinfo, (uv_getnameinfo_cb) on_nameinfo_resolved, (const struct sockaddr*) &addr4, 0)) != 0) {
             RELEASE_INFO(getnameinfo);
         }
         
         return ret;
     }
     
+    static void HHVM_METHOD(UVResolver, __construct, const Variant &v_loop) {
+        if(v_loop.isNull()){
+            return;
+        }
+        
+        Object loop = v_loop.toObject();
+        checkUVLoopInstance(loop, 1, s_uvresolver, StaticString("__construct"));
+        SET_LOOP(this_, loop, s_uvresolver);
+    }
+    
     void uvExtension::_initUVResolverClass() {
+        HHVM_ME(UVResolver, __construct);
         HHVM_ME(UVResolver, getaddrinfo);
         HHVM_ME(UVResolver, getnameinfo);
         Native::registerNativeDataInfo<UVResolverData>(s_uvresolver.get());

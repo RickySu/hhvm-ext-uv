@@ -25,15 +25,24 @@ namespace HPHP {
         vm_call_user_func(data->callback, make_packed_array(idle_handle->idle_object_data));
     }
     
-    static void HHVM_METHOD(UVIdle, __construct, const Object &loop) {
-        auto* loop_data = Native::data<UVLoopData>(loop.get());
+    static void HHVM_METHOD(UVIdle, __construct, const Variant &v_loop) {
         auto* data = Native::data<UVNativeData>(this_);
-        SET_LOOP(this_, loop, s_uvidle);
         data->resource_handle = (void *) new uv_idle_ext_t();
         uv_idle_ext_t *idle_handle = fetchResource(data);
-        uv_idle_init(loop_data->loop, idle_handle);
         idle_handle->start = false;
         idle_handle->idle_object_data = NULL;
+        
+        if(v_loop.isNull()){
+            uv_idle_init(uv_default_loop(), idle_handle);
+            return;
+        }
+        
+        Object loop = v_loop.toObject();
+        checkUVLoopInstance(loop, 1, s_uvidle, StaticString("__construct"));
+        auto* loop_data = Native::data<UVLoopData>(loop.get());        
+        SET_LOOP(this_, loop, s_uvidle);
+        uv_idle_init(loop_data->loop, idle_handle);
+
     }
     
     static int64_t HHVM_METHOD(UVIdle, start, const Variant &idle_cb) {

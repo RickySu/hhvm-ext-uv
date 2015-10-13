@@ -16,8 +16,10 @@ UVLoopData::UVLoopData(){
     uv_loop_init(loop);
 }
 void UVLoopData::sweep(){
-    uv_loop_close(loop);
-    delete loop;
+    if(loop != uv_default_loop()){
+        uv_loop_close(loop);
+        delete loop;
+    }
 }
 UVLoopData::~UVLoopData() {
     sweep();
@@ -77,11 +79,19 @@ UVLoopData::~UVLoopData() {
         return uv_backend_timeout(data->loop);
     }    
     
+    static Object HHVM_STATIC_METHOD(UVLoop, makeDefaultLoop) {
+        Object loop(makeObject(s_uvloop, false));
+        auto* loop_data = Native::data<UVLoopData>(loop.get());
+        loop_data->loop = uv_default_loop();
+        return loop;
+    }
+    
     void uvExtension::_initUVLoopClass() {
         REGISTER_UV_LOOP_CONSTANT(RUN_DEFAULT);
         REGISTER_UV_LOOP_CONSTANT(RUN_ONCE);
         REGISTER_UV_LOOP_CONSTANT(RUN_NOWAIT);
         
+        HHVM_STATIC_ME(UVLoop, makeDefaultLoop);
         HHVM_ME(UVLoop, run);
         HHVM_ME(UVLoop, stop);
         HHVM_ME(UVLoop, alive);

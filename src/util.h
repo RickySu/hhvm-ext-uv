@@ -72,8 +72,18 @@ namespace HPHP
     }
     
     ALWAYS_INLINE UVLoopData* getLoopData(ObjectData *objectdata){
+        auto v_loop = objectdata->o_get("loop", false, s_uvresolver);
+        if(v_loop.isNull()){
+            return NULL;
+        }
         auto loop = objectdata->o_get("loop", false, s_uvresolver).toObject();
         return Native::data<UVLoopData>(loop.get());
+    }
+    
+    ALWAYS_INLINE void checkUVLoopInstance(const Object &loop, int arg_index, const String &class_name, const String &method_name) {
+        if(!loop.instanceof(s_uvloop)){
+            raise_recoverable_error("Argument %d passed to %s::%s must be an instance of %s, %s given", arg_index, class_name.c_str(), method_name.c_str(), s_uvloop.c_str(), loop.get()->getClassName().c_str());
+        }
     }
     
 }
