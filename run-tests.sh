@@ -14,5 +14,5 @@ if [ ! -z "${REALPATH}" ]; then
 fi
 $HHVM_BIN ./testtools/test/run \
    -a "-vDynamicExtensions.0=${DIRNAME}/uv.so -vEval.Jit=true" \
-   ${DIRNAME}/tests
+   ${DIRNAME}/tests/*/test_*.php
 
