@@ -4,12 +4,12 @@ $tickonece = [];
 $tick = [];
 $loop = UVLoop::defaultLoop();
 $time = microtime(true);
-$timerOnece = new UVTimer($loop);
+$timerOnece = new UVTimer();
 $timerOnece->start(function($timer)use(&$tickonece, $time){
     $tickonece[] = round((microtime(true)-$time)*10);
 }, 500);
 
-$timer = new UVTimer($loop);
+$timer = new UVTimer();
 $timer->start(function($timer)use(&$tick, $time){
     $tick[] = floor((microtime(true)-$time)*10);
     if(count($tick)>5){

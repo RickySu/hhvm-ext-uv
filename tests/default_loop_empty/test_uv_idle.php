@@ -2,7 +2,7 @@
 require __DIR__ . '/../../test-tools.php';
 $loop = UVLoop::defaultLoop();
 $count = 0;
-$idle = new UVIdle($loop);
+$idle = new UVIdle();
 $idle->start(function($idle) use(&$count){
     if($count++ > 10){
         $idle->stop();

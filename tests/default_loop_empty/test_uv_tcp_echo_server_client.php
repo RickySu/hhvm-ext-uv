@@ -17,7 +17,7 @@ if($pid){
     exit;
 }
 $loop = UVLoop::defaultLoop();
-$client = new UVTcp($loop);
+$client = new UVTcp();
 $randomValue = md5(rand().microtime());
 
 $client->connect($host, $port, function($client, $status) use($randomValue){

@@ -36,7 +36,7 @@ if($pid){
     exit;
 }
 $loop = UVLoop::defaultLoop();
-$server = new UVSSL($loop);
+$server = new UVSSL();
 $server->setCert(file_get_contents(__DIR__."/../cert/server.crt"));
 $server->setPrivateKey(file_get_contents(__DIR__."/../cert/server.key"));
 $server->clientCloseTriggered = false;

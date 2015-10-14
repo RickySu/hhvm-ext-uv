@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../../test-tools.php';
 $loop = UVLoop::defaultLoop();
-$resolver = new UVResolver($loop);
+$resolver = new UVResolver();
 $nameinfook = false;
 $addrinfook = false;
 $hostexpect = gethostbyaddr("127.0.0.1");

@@ -8,7 +8,7 @@ if($pid){
     exit;
 }
 $loop = UVLoop::defaultLoop();
-$signal = new UVSignal($loop);
+$signal = new UVSignal();
 $signal->start(function($signal, $signo){
     True(true, "UVSignal");
     $signal->stop();

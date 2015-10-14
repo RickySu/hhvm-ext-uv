@@ -3,7 +3,7 @@ require __DIR__ . '/../../test-tools.php';
 $html = '';
 $host = gethostbyname('github.com');
 $loop = UVLoop::defaultLoop();
-$ssl = new UVSSL($loop);
+$ssl = new UVSSL();
 $ssl->connect($host, 443, function($ssl) use(&$html){
     $ssl->setSSLHandshakeCallback(function($ssl) use(&$html){
         echo "handshake: ok\n";

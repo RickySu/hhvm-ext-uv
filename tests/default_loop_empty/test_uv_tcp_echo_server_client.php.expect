@@ -1,0 +1,5 @@
+on connect ok
+random value ok
+on write ok
+on shutdown ok
+on read ok
