@@ -28,9 +28,8 @@ if($pid){
     pcntl_waitpid($pid, $status);
     exit;
 }
-
-$loop = new UVLoop();
-$server = new UVTcp($loop);
+$loop = UVLoop::defaultLoop();
+$server = new UVTcp(null);
 $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
     $client = $server->accept();

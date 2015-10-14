@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../../test-tools.php';
 $host = '127.0.0.1';
-$port = 8890;
+$port = rand(5000, 9000);
 $pid = pcntl_fork();
 if($pid){
     $socket = stream_socket_server("tcp://$host:$port", $errno, $errstr);

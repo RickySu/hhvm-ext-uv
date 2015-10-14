@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../../test-tools.php';
 $host = '0.0.0.0';
-$port = 8889;
+$port = rand(5000, 9000);
 $pid = pcntl_fork();
 if($pid){
     usleep(100000);
