@@ -131,7 +131,6 @@ namespace HPHP {
     
     static void HHVM_METHOD(UVSSL, __construct, const Variant &v_loop, int64_t method, int64_t nContexts){
         check_ssl_support();
-        SSL_library_init();
         auto* data = Native::data<UVTcpData>(this_);
         if(v_loop.isNull()){
             initUVTcpObject(this_, uv_default_loop(), new uv_ssl_ext_t());
