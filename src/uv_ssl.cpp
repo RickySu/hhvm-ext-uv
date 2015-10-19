@@ -131,6 +131,7 @@ namespace HPHP {
     
     static void HHVM_METHOD(UVSSL, __construct, const Variant &v_loop, int64_t method, int64_t nContexts){
         check_ssl_support();
+        SSL_library_init();
         auto* data = Native::data<UVTcpData>(this_);
         if(v_loop.isNull()){
             initUVTcpObject(this_, uv_default_loop(), new uv_ssl_ext_t());
@@ -147,20 +148,24 @@ namespace HPHP {
         data->releaseHook = releaseHook;
         data->gcHook = gcHook;
         switch(method){
-            case SSL_METHOD_SSLV2:
-#ifdef OPENSSL_NO_SSL2
-                ssl_handle->sslResource.ssl_method = SSLv3_method();
-                break;
-#else
-                ssl_handle->sslResource.ssl_method = SSLv2_method();
-                break;
-#endif
-            case SSL_METHOD_SSLV3:
-                ssl_handle->sslResource.ssl_method = SSLv3_method();
-                break;
             case SSL_METHOD_SSLV23:
                 ssl_handle->sslResource.ssl_method = SSLv23_method();
                 break;
+            case SSL_METHOD_SSLV2:
+#ifndef OPENSSL_NO_SSL2
+                ssl_handle->sslResource.ssl_method = SSLv2_method();
+                break;
+#else
+    #ifndef OPENSSL_NO_SSL3_METHOD
+                ssl_handle->sslResource.ssl_method = SSLv3_method();
+                break;
+    #endif
+#endif
+            case SSL_METHOD_SSLV3:
+#ifndef OPENSSL_NO_SSL3_METHOD
+                ssl_handle->sslResource.ssl_method = SSLv3_method();
+                break;
+#endif
             case SSL_METHOD_TLSV1:
                 ssl_handle->sslResource.ssl_method = TLSv1_method();
                 break;
@@ -319,6 +324,7 @@ namespace HPHP {
     }
     
     void uvExtension::_initUVSSLClass() {
+        SSL_library_init();
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV2);
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV3);
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV23);
