@@ -1,15 +1,6 @@
 #include "uv_tcp.h"
 
 namespace HPHP {
-    ALWAYS_INLINE void setSelfReference(uv_tcp_ext_t *handle)
-    {
-        if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
-            return;
-        }
-        handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
-        handle->tcp_object_data->incRefCount();
-    }
-
     UVTcpData::~UVTcpData(){
         sweep();
     }
@@ -45,23 +36,6 @@ namespace HPHP {
         }
     }
 
-    ALWAYS_INLINE void releaseHandle(uv_tcp_ext_t *handle) {
-        if(handle->flag & UV_TCP_READ_START){
-            handle->flag &= ~UV_TCP_READ_START;        
-            uv_read_stop((uv_stream_t *) handle);
-        }
-        
-        if(handle->flag & UV_TCP_HANDLE_START){
-            handle->flag &= ~UV_TCP_HANDLE_START;        
-            uv_unref((uv_handle_t *) handle);
-        }    
-        
-        if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
-            handle->flag &= ~UV_TCP_HANDLE_INTERNAL_REF;
-            ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
-        }
-    }
-    
     uv_tcp_ext_t *initUVTcpObject(ObjectData *objectData, uv_loop_t *loop, uv_tcp_ext_t *tcp_handler) {
         auto* data = Native::data<UVTcpData>(objectData);
         data->tcp_handle = tcp_handler;

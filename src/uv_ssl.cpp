@@ -7,6 +7,42 @@
 #endif
 
 namespace HPHP {
+    typedef struct uv_getaddrinfo_ext_s: public uv_getaddrinfo_t{
+        uv_ssl_ext_t *ssl_handle;
+    } uv_getaddrinfo_ext_t;
+            
+    ALWAYS_INLINE uv_loop_t *fetchLoop(ObjectData *this_){
+        auto v_loop = this_->o_get(s_internal_loop, false, s_uvtcp);
+        if(v_loop.isNull()){
+            return uv_default_loop();
+        }
+        Object loop = v_loop.toObject();
+        auto* loop_data = Native::data<UVLoopData>(loop.get());
+        return loop_data->loop;    
+    }
+
+    static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx) {
+        int ret = preverify_ok;
+        X509_STORE_CTX_get_current_cert(ctx);
+        int err = X509_STORE_CTX_get_error(ctx);
+        int depth = X509_STORE_CTX_get_error_depth(ctx);
+        SSL *ssl = (SSL*) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+
+        X509_STORE_CTX_get_current_cert(ctx);        
+        ssl = (SSL *) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+        ret = preverify_ok;
+        err = X509_STORE_CTX_get_error(ctx);
+        depth = X509_STORE_CTX_get_error_depth(ctx);
+        X509_STORE_CTX_set_error(ctx, err);
+        printf("preverify: %d %d %s\n", err, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT, X509_verify_cert_error_string(err));
+
+        if(!preverify_ok){
+            printf("error\n");
+            return preverify_ok;
+        }
+        
+        return 1;
+    }
 
     static void releaseHook(UVTcpData *data){
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
@@ -22,6 +58,7 @@ namespace HPHP {
         }
         ssl_handle->sslHandshakeCallback.unset();
         ssl_handle->sslServerNameCallback.unset();
+        ssl_handle->sniConnectHostname.clear();
     }
     
     static void gcHook(UVTcpData *data){
@@ -73,59 +110,78 @@ namespace HPHP {
         return ret;
     }    
 
+    ALWAYS_INLINE bool handleHandshake(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf){
+        int ret, err;
+        auto sslHandshakeCallback = ssl_handle->sslHandshakeCallback;
+
+        if(SSL_is_init_finished(ssl_handle->sslResource.ssl)) {
+            ssl_handle->flag |= UV_TCP_WRITE_CALLBACK_ENABLE;
+            return true;
+        }
+        
+        ret = SSL_do_handshake(ssl_handle->sslResource.ssl);
+        write_bio_to_socket(ssl_handle);
+
+        if(ret != 1){
+            err = SSL_get_error(ssl_handle->sslResource.ssl, ret);
+            switch(err){
+                case SSL_ERROR_WANT_READ:
+                    break;
+                case SSL_ERROR_WANT_WRITE:
+                    write_bio_to_socket(ssl_handle);
+                    break;
+                default:
+                    printf("err:%d\n", err);
+                    printf("message:%s\n", X509_verify_cert_error_string(SSL_get_verify_result(ssl_handle->sslResource.ssl)));
+            }
+            return false;
+        }
+
+        if(!sslHandshakeCallback.isNull()){
+            vm_call_user_func(sslHandshakeCallback, make_packed_array(ssl_handle->tcp_object_data));
+        }                
+        return true;
+    }
+    
     static void read_cb(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf) {
         auto* data = Native::data<UVTcpData>(ssl_handle->tcp_object_data);
         auto readCallback = data->readCallback;
         auto errorCallback = data->errorCallback;
-        auto sslHandshakeCallback = ssl_handle->sslHandshakeCallback;
         char read_buf[256];
-        int size, err, ret, read_buf_index;
-        if(nread > 0){
-            BIO_write(ssl_handle->sslResource.read_bio, buf->base, nread);
-            if (!SSL_is_init_finished(ssl_handle->sslResource.ssl)) {
-                ret = SSL_do_handshake(ssl_handle->sslResource.ssl);
-                write_bio_to_socket(ssl_handle);
-                if(ret != 1){
-                    err = SSL_get_error(ssl_handle->sslResource.ssl, ret);
-                    if (err == SSL_ERROR_WANT_READ) {
-                    }
-                    else if(err == SSL_ERROR_WANT_WRITE){
-                        write_bio_to_socket(ssl_handle);
-                    }
-                    else{
-                    }
-                }
-                else{
-                    if(!sslHandshakeCallback.isNull()){
-                        vm_call_user_func(sslHandshakeCallback, make_packed_array(ssl_handle->tcp_object_data));
-                    }                
-                }
-                return;
-            }
-            ssl_handle->flag |= UV_TCP_WRITE_CALLBACK_ENABLE;
-            read_buf_index = 0;
-            while(true){
-                size = SSL_read(ssl_handle->sslResource.ssl, &read_buf[read_buf_index], sizeof(read_buf) - read_buf_index);
-                if(size > 0){
-                    read_buf_index+=size;
-                }
-                if(size <= 0 || read_buf_index >= sizeof(read_buf)){
-                    if(!readCallback.isNull()){
-                        vm_call_user_func(readCallback, make_packed_array(ssl_handle->tcp_object_data, String(read_buf, read_buf_index, CopyString)));
-                    }
-                    read_buf_index = 0;
-                }
-                if(size <= 0){
-                    break;
-                }
-            }
-        }
-        else if(nread<0){
+        int size, read_buf_index = 0;
+        
+        if(nread<0){
             if(!errorCallback.isNull()){
                 vm_call_user_func(errorCallback, make_packed_array(ssl_handle->tcp_object_data, nread));
             }
             tcp_close_socket(ssl_handle);
+            delete buf->base;
+            return;
         }
+        
+        BIO_write(ssl_handle->sslResource.read_bio, buf->base, nread);
+            
+        if(!handleHandshake(ssl_handle, nread, buf)){
+            delete buf->base;
+            return;
+        }            
+
+        while(true){
+            size = SSL_read(ssl_handle->sslResource.ssl, &read_buf[read_buf_index], sizeof(read_buf) - read_buf_index);
+            if(size > 0){
+                read_buf_index+=size;
+            }
+            if(size <= 0 || read_buf_index >= sizeof(read_buf)){
+                if(!readCallback.isNull()){
+                    vm_call_user_func(readCallback, make_packed_array(ssl_handle->tcp_object_data, String(read_buf, read_buf_index, CopyString)));
+                }
+                read_buf_index = 0;
+            }
+            if(size <= 0){
+                break;
+            }
+        }
+
         delete buf->base;
     }
     
@@ -184,12 +240,14 @@ namespace HPHP {
             ssl_handle->sslResource.ctx[i] = SSL_CTX_new(ssl_handle->sslResource.ssl_method);
             SSL_CTX_set_session_cache_mode(ssl_handle->sslResource.ctx[i], SSL_SESS_CACHE_BOTH);
         }
-#ifndef OPENSSL_NO_TLSEXT        
+
+#ifndef OPENSSL_NO_TLSEXT
         if(method >= SSL_METHOD_TLSV1){
             SSL_CTX_set_tlsext_servername_callback(ssl_handle->sslResource.ctx[0], sni_cb);
             SSL_CTX_set_tlsext_servername_arg(ssl_handle->sslResource.ctx[0], this_);
         }
 #endif
+        
     }
     
     static bool HHVM_METHOD(UVSSL, setCert, const String &cert, int64_t n){
@@ -290,38 +348,82 @@ namespace HPHP {
         uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(ssl_handle->tcp_object_data);
         auto callback = data->connectCallback;
+        
+        SSL_CTX_set_verify(ssl_handle->sslResource.ctx[0], SSL_VERIFY_PEER, verify_callback);
+        SSL_CTX_set_default_verify_paths(ssl_handle->sslResource.ctx[0]);
+        SSL_CTX_set_verify_depth(ssl_handle->sslResource.ctx[0], 9);
+        SSL_CTX_set_cipher_list(ssl_handle->sslResource.ctx[0], "DEFAULT");
+        
         uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
+
         ssl_handle->sslResource.ssl = SSL_new(ssl_handle->sslResource.ctx[0]);
         ssl_handle->sslResource.read_bio = BIO_new(BIO_s_mem());
-        ssl_handle->sslResource.write_bio = BIO_new(BIO_s_mem());        
+        ssl_handle->sslResource.write_bio = BIO_new(BIO_s_mem());
+        
+
         SSL_set_bio(ssl_handle->sslResource.ssl, ssl_handle->sslResource.read_bio, ssl_handle->sslResource.write_bio);
+
+#ifndef OPENSSL_NO_TLSEXT
+        SSL_set_tlsext_host_name(ssl_handle->sslResource.ssl, ssl_handle->sniConnectHostname.c_str());
+#endif        
+  
         SSL_set_connect_state(ssl_handle->sslResource.ssl);
         SSL_connect(ssl_handle->sslResource.ssl);
+        
         write_bio_to_socket(ssl_handle);
         ssl_handle->flag |= (UV_TCP_HANDLE_START|UV_TCP_READ_START);
+                    
         if(!callback.isNull()){
             vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, status));
         }    
     }   
+
+    static void on_addrinfo_resolved(uv_getaddrinfo_ext_t *info, int status, struct addrinfo *res) {
+        int64_t ret;
+        struct sockaddr_in addr;
+        uv_ssl_ext_t *ssl_handle = info->ssl_handle;
+        auto callback = Native::data<UVTcpData>(ssl_handle->tcp_object_data)->connectCallback;
+        char host[17] = {'\0'};
+        if( (ret = status) != 0 || 
+            (ret = uv_ip4_name((struct sockaddr_in*) res->ai_addr, host, 16)) != 0 ||
+            (ret = uv_ip4_addr(host, ssl_handle->port&0xffff, &addr)) != 0 ||
+            (ret = uv_tcp_connect(&ssl_handle->connect_req, ssl_handle, (const struct sockaddr*) &addr, client_connection_cb)) != 0){
+            vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, ret));
+            releaseHandle(ssl_handle);
+        }
+        uv_freeaddrinfo(res);
+        delete info;
+    }
     
     static int64_t HHVM_METHOD(UVSSL, connect, const String &host, int64_t port, const Variant &onConnectCallback) {
         int64_t ret;
         struct sockaddr_in addr;
         auto* data = Native::data<UVTcpData>(this_);
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
-        
+
+        ssl_handle->sniConnectHostname = host;
+        ssl_handle->port = port;        
+        data->connectCallback = onConnectCallback;
+
         if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
+            uv_getaddrinfo_ext_t *addrinfo = new uv_getaddrinfo_ext_t();
+            addrinfo->ssl_handle = ssl_handle;
+            auto loop_ext = fetchLoop(this_);
+            uv_getaddrinfo(loop_ext, addrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, host.c_str(), NULL, NULL);
+            setSelfReference(data->tcp_handle);
+            ssl_handle->flag |= UV_TCP_HANDLE_START;
             return ret;
         }
+
         if((ret = uv_tcp_connect(&ssl_handle->connect_req, (uv_tcp_t *) data->tcp_handle, (const struct sockaddr*) &addr, client_connection_cb)) != 0){
             return ret;
         }
-        
-        data->connectCallback = onConnectCallback;
+
+        setSelfReference(data->tcp_handle);
         ssl_handle->flag |= UV_TCP_HANDLE_START;
         return ret;
     }
-    
+
     void uvExtension::_initUVSSLClass() {
         SSL_library_init();
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_SSLV2);

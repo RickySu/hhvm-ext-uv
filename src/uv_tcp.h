@@ -48,7 +48,30 @@ namespace HPHP {
         uv_close((uv_handle_t *) handle, tcp_close_cb);        
     }
     
-    ALWAYS_INLINE void releaseHandle(uv_tcp_ext_t *handle);
+    ALWAYS_INLINE void releaseHandle(uv_tcp_ext_t *handle){
+       if(handle->flag & UV_TCP_READ_START){    
+            handle->flag &= ~UV_TCP_READ_START;  
+            uv_read_stop((uv_stream_t *) handle);
+        }
+        
+        if(handle->flag & UV_TCP_HANDLE_START){  
+            handle->flag &= ~UV_TCP_HANDLE_START;
+            uv_unref((uv_handle_t *) handle);
+        }
+        
+        if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){  
+            handle->flag &= ~UV_TCP_HANDLE_INTERNAL_REF;
+            ((uv_tcp_ext_t *) handle)->tcp_object_data->decRefAndRelease();
+        }
+    }
+
+    ALWAYS_INLINE void setSelfReference(uv_tcp_ext_t *handle) {    
+        if(handle->flag & UV_TCP_HANDLE_INTERNAL_REF){
+            return;
+        }
+        handle->flag |= UV_TCP_HANDLE_INTERNAL_REF;
+        handle->tcp_object_data->incRefCount();
+    }
     
     class UVTcpData {
         public:
