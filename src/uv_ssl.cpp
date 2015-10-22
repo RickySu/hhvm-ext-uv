@@ -22,25 +22,26 @@ namespace HPHP {
     }
 
     static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx) {
-        int ret = preverify_ok;
         X509_STORE_CTX_get_current_cert(ctx);
         int err = X509_STORE_CTX_get_error(ctx);
         int depth = X509_STORE_CTX_get_error_depth(ctx);
-        SSL *ssl = (SSL*) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
-
-        X509_STORE_CTX_get_current_cert(ctx);        
-        ssl = (SSL *) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
-        ret = preverify_ok;
-        err = X509_STORE_CTX_get_error(ctx);
-        depth = X509_STORE_CTX_get_error_depth(ctx);
-        X509_STORE_CTX_set_error(ctx, err);
-        printf("preverify: %d %d %s\n", err, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT, X509_verify_cert_error_string(err));
 
         if(!preverify_ok){
-            printf("error\n");
             return preverify_ok;
         }
-        
+
+        X509_STORE_CTX_get_current_cert(ctx);        
+        err = X509_STORE_CTX_get_error(ctx);
+        depth = X509_STORE_CTX_get_error_depth(ctx);
+        if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT){
+            X509_STORE_CTX_set_error(ctx, err);
+            return 0;
+        }
+        if(depth > OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH){
+            X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
+            return 0;
+        }
+
         return 1;
     }
 
@@ -109,10 +110,23 @@ namespace HPHP {
         }
         return ret;
     }    
+    
+    ALWAYS_INLINE bool handleHandshakeCallback(Variant &callback, uv_ssl_ext_t *ssl_handle, int err){
+        bool retval = false;
+        if(!callback.isNull()){
+            retval = vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, err)).toBoolean();
+        }
+        if(!retval){
+            tcp_close_socket(ssl_handle);
+        }
+        
+        return retval;
+    }
 
     ALWAYS_INLINE bool handleHandshake(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf){
         int ret, err;
         auto sslHandshakeCallback = ssl_handle->sslHandshakeCallback;
+        X509 *peer_cert;
 
         if(SSL_is_init_finished(ssl_handle->sslResource.ssl)) {
             ssl_handle->flag |= UV_TCP_WRITE_CALLBACK_ENABLE;
@@ -126,21 +140,27 @@ namespace HPHP {
             err = SSL_get_error(ssl_handle->sslResource.ssl, ret);
             switch(err){
                 case SSL_ERROR_WANT_READ:
-                    break;
+                    return false;
                 case SSL_ERROR_WANT_WRITE:
                     write_bio_to_socket(ssl_handle);
-                    break;
+                    return false;
                 default:
-                    printf("err:%d\n", err);
-                    printf("message:%s\n", X509_verify_cert_error_string(SSL_get_verify_result(ssl_handle->sslResource.ssl)));
+                    if(!handleHandshakeCallback(sslHandshakeCallback, ssl_handle, SSL_get_verify_result(ssl_handle->sslResource.ssl))){
+                        return false;
+                    }
             }
-            return false;
         }
 
-        if(!sslHandshakeCallback.isNull()){
-            vm_call_user_func(sslHandshakeCallback, make_packed_array(ssl_handle->tcp_object_data));
-        }                
-        return true;
+        err = X509_V_OK;
+        if(ssl_handle->clientMode){
+            peer_cert = SSL_get_peer_certificate(ssl_handle->sslResource.ssl);
+
+            if(!matches_common_name(peer_cert, ssl_handle->sniConnectHostname.c_str()) && !matches_san_list(peer_cert, ssl_handle->sniConnectHostname.c_str())){
+                err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+            }
+            X509_free(peer_cert);
+        }
+        return handleHandshakeCallback(sslHandshakeCallback, ssl_handle, err);
     }
     
     static void read_cb(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf) {
@@ -348,12 +368,12 @@ namespace HPHP {
         uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(ssl_handle->tcp_object_data);
         auto callback = data->connectCallback;
+
         
         SSL_CTX_set_verify(ssl_handle->sslResource.ctx[0], SSL_VERIFY_PEER, verify_callback);
         SSL_CTX_set_default_verify_paths(ssl_handle->sslResource.ctx[0]);
-        SSL_CTX_set_verify_depth(ssl_handle->sslResource.ctx[0], 9);
         SSL_CTX_set_cipher_list(ssl_handle->sslResource.ctx[0], "DEFAULT");
-        
+
         uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
 
         ssl_handle->sslResource.ssl = SSL_new(ssl_handle->sslResource.ctx[0]);
@@ -412,6 +432,7 @@ namespace HPHP {
             uv_getaddrinfo(loop_ext, addrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, host.c_str(), NULL, NULL);
             setSelfReference(data->tcp_handle);
             ssl_handle->flag |= UV_TCP_HANDLE_START;
+            ssl_handle->clientMode = true;
             return ret;
         }
 
@@ -421,6 +442,7 @@ namespace HPHP {
 
         setSelfReference(data->tcp_handle);
         ssl_handle->flag |= UV_TCP_HANDLE_START;
+        ssl_handle->clientMode = true;
         return ret;
     }
 
@@ -432,6 +454,70 @@ namespace HPHP {
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1);
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1_1);
         REGISTER_UV_SSL_CONSTANT(SSL_METHOD_TLSV1_2);
+
+        REGISTER_UV_SSL_CONSTANT(X509_V_OK);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_GET_CRL);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_SIGNATURE_FAILURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CRL_SIGNATURE_FAILURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_NOT_YET_VALID);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_HAS_EXPIRED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CRL_NOT_YET_VALID);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CRL_HAS_EXPIRED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_OUT_OF_MEM);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_CHAIN_TOO_LONG);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_REVOKED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_INVALID_CA);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_PATH_LENGTH_EXCEEDED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_INVALID_PURPOSE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_UNTRUSTED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CERT_REJECTED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_AKID_SKID_MISMATCH);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_KEYUSAGE_NO_CERTSIGN);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_KEYUSAGE_NO_CRL_SIGN);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_INVALID_NON_CA);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_INVALID_EXTENSION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_INVALID_POLICY_EXTENSION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_NO_EXPLICIT_POLICY);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_DIFFERENT_CRL_SCOPE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNNESTED_RESOURCE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_PERMITTED_VIOLATION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_EXCLUDED_VIOLATION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUBTREE_MINMAX);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_UNSUPPORTED_NAME_SYNTAX);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_CRL_PATH_VALIDATION_ERROR);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUITE_B_INVALID_VERSION);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUITE_B_INVALID_ALGORITHM);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUITE_B_INVALID_CURVE);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUITE_B_INVALID_SIGNATURE_ALGORITHM);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUITE_B_LOS_NOT_ALLOWED);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_SUITE_B_CANNOT_SIGN_P_384_WITH_P_256);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_HOSTNAME_MISMATCH);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_EMAIL_MISMATCH);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_IP_ADDRESS_MISMATCH);
+        REGISTER_UV_SSL_CONSTANT(X509_V_ERR_APPLICATION_VERIFICATION);
         
         HHVM_ME(UVSSL, accept);
         HHVM_ME(UVSSL, write);

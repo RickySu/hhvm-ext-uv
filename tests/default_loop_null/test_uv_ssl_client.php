@@ -1,11 +1,11 @@
 <?php
 require __DIR__ . '/../../test-tools.php';
 $html = '';
-$host = gethostbyname('github.com');
+$host = 'github.com';
 $loop = UVLoop::defaultLoop();
 $ssl = new UVSSL(null);
 $ssl->connect($host, 443, function($ssl) use(&$html){
-    $ssl->setSSLHandshakeCallback(function($ssl) use(&$html){
+    $ssl->setSSLHandshakeCallback(function($ssl, $status) use(&$html){
         echo "handshake: ok\n";
         $ssl->setCallback(function($ssl, $recv) use(&$html){
             $html.=$recv;
@@ -19,6 +19,7 @@ $ssl->connect($host, 443, function($ssl) use(&$html){
         });
         $request = "GET /RickySu/php_ext_uv HTTP/1.0\r\nUser-Agent: UVSSL\r\nAccept: */*\r\nHost: github.com\r\n\r\n";
         $ssl->write($request);
+        return true;
     });
 });
 

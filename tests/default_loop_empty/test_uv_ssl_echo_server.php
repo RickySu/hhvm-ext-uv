@@ -35,6 +35,7 @@ if($pid){
     pcntl_waitpid($pid, $status);
     exit;
 }
+
 $loop = UVLoop::defaultLoop();
 $server = new UVSSL();
 $server->setCert(file_get_contents(__DIR__."/../cert/server.crt"));
@@ -43,11 +44,12 @@ $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
 
     $client = $server->accept();
-    $client->setSSLHandshakeCallback(function($client) use($server){
+    $client->setSSLHandshakeCallback(function($client, $status) use($server){
         if($server->clientCloseTriggered){
             $client->write("client closed");
             $server->clientCloseTriggered = false;
-        }    
+        }
+        return true;
     });
     $client->setCallback(function($client, $recv) use($server){
         $client->write($recv);    

@@ -2,7 +2,7 @@
 #define UV_SSL_H
 
 #include "uv_tcp.h"
-#include <openssl/ssl.h>
+#include "ssl_verify.h"
 
 #define OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH 9
 
@@ -35,6 +35,7 @@ namespace HPHP
         Variant sslServerNameCallback;
         String sniConnectHostname;
         int64_t port;
+        bool clientMode;
     } uv_ssl_ext_t;
     
     ALWAYS_INLINE void initSSLHandle(uv_ssl_ext_t *handle)
@@ -43,6 +44,7 @@ namespace HPHP
         handle->sslHandshakeCallback.setNull();
         handle->sslServerNameCallback.setNull();
         handle->sniConnectHostname.clear();
+        handle->clientMode = false;
     }
     
     ALWAYS_INLINE uv_ssl_ext_t *fetchSSLHandle(UVTcpData *data){

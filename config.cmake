@@ -28,6 +28,7 @@ HHVM_EXTENSION(uv
     src/uv_ssl.cpp
     src/uv_idle.cpp
     src/uv_natice_data.cpp
+    src/ssl_verify.c
 )
 HHVM_SYSTEMLIB(uv ext_uv.php)
 

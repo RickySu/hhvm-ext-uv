@@ -44,11 +44,12 @@ $server->clientCloseTriggered = false;
 Equal(0, $server->listen($host, $port, function($server) {
 
     $client = $server->accept();
-    $client->setSSLHandshakeCallback(function($client) use($server){
+    $client->setSSLHandshakeCallback(function($client, $status) use($server){
         if($server->clientCloseTriggered){
             $client->write("client closed");
             $server->clientCloseTriggered = false;
-        }    
+        }
+        return true;
     });
     $client->setCallback(function($client, $recv) use($server){
         $client->write($recv);    
