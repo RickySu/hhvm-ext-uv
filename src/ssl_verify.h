@@ -8,10 +8,6 @@
 extern "C" {
 #endif
 
-int php_x509_fingerprint_cmp(X509 *peer, const char *method, const char *expected);
-
-int php_x509_fingerprint_match(X509 *peer, const char *hash);
-
 int matches_wildcard_name(const char *subjectname, const char *certname);
 
 int matches_san_list(X509 *peer, const char *subject_name);
