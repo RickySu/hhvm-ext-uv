@@ -9,6 +9,7 @@
 namespace HPHP {
     typedef struct uv_getaddrinfo_ext_s: public uv_getaddrinfo_t{
         uv_ssl_ext_t *ssl_handle;
+        int64_t port;
     } uv_getaddrinfo_ext_t;
             
     ALWAYS_INLINE uv_loop_t *fetchLoop(ObjectData *this_){
@@ -406,7 +407,7 @@ namespace HPHP {
         char host[17] = {'\0'};
         if( (ret = status) != 0 || 
             (ret = uv_ip4_name((struct sockaddr_in*) res->ai_addr, host, 16)) != 0 ||
-            (ret = uv_ip4_addr(host, ssl_handle->port&0xffff, &addr)) != 0 ||
+            (ret = uv_ip4_addr(host, info->port&0xffff, &addr)) != 0 ||
             (ret = uv_tcp_connect(&ssl_handle->connect_req, ssl_handle, (const struct sockaddr*) &addr, client_connection_cb)) != 0){
             vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, ret));
             releaseHandle(ssl_handle);
@@ -422,18 +423,18 @@ namespace HPHP {
         uv_ssl_ext_t *ssl_handle = fetchSSLHandle(data);
 
         ssl_handle->sniConnectHostname = host;
-        ssl_handle->port = port;        
         data->connectCallback = onConnectCallback;
 
         if((ret = uv_ip4_addr(host.c_str(), port&0xffff, &addr)) != 0){
             uv_getaddrinfo_ext_t *addrinfo = new uv_getaddrinfo_ext_t();
             addrinfo->ssl_handle = ssl_handle;
+            addrinfo->port = port;
             auto loop_ext = fetchLoop(this_);
             uv_getaddrinfo(loop_ext, addrinfo, (uv_getaddrinfo_cb) on_addrinfo_resolved, host.c_str(), NULL, NULL);
             setSelfReference(data->tcp_handle);
             ssl_handle->flag |= UV_TCP_HANDLE_START;
             ssl_handle->clientMode = true;
-            return ret;
+            return 0;
         }
 
         if((ret = uv_tcp_connect(&ssl_handle->connect_req, (uv_tcp_t *) data->tcp_handle, (const struct sockaddr*) &addr, client_connection_cb)) != 0){

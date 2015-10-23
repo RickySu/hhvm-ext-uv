@@ -34,7 +34,6 @@ namespace HPHP
         Variant sslHandshakeCallback;
         Variant sslServerNameCallback;
         String sniConnectHostname;
-        int64_t port;
         bool clientMode;
     } uv_ssl_ext_t;
     
