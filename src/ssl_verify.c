@@ -72,7 +72,6 @@ int matches_common_name(X509 *peer, const char *subject_name) {
 
 	cert_name = X509_get_subject_name(peer);
 	cert_name_len = X509_NAME_get_text_by_NID(cert_name, NID_commonName, buf, sizeof(buf));
-
 	if (cert_name_len == -1) {
 	    return 0;
 	} 
@@ -80,9 +79,8 @@ int matches_common_name(X509 *peer, const char *subject_name) {
 	if (cert_name_len != strlen(buf)) {
 	    return 0;
 	}
-	if (!matches_wildcard_name(subject_name, buf)) {
+	if (!strcmp(subject_name, buf) && !matches_wildcard_name(subject_name, buf)) {
 	    return 0;
 	}
-
 	return 1;
 }

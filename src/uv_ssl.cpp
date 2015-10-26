@@ -22,28 +22,38 @@ namespace HPHP {
         return loop_data->loop;    
     }
 
+    ALWAYS_INLINE bool handleHandshakeCallback(Variant &callback, uv_ssl_ext_t *ssl_handle, int err){
+        bool retval = false;
+        if(!callback.isNull()){
+            retval = vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, err)).toBoolean();
+        }
+        if(!retval){
+            tcp_close_socket(ssl_handle);
+        }
+        
+        return retval;
+    }
+
     static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx) {
+        uv_ssl_ext_t *ssl_handle;
+        SSL *ssl;
         X509_STORE_CTX_get_current_cert(ctx);
         int err = X509_STORE_CTX_get_error(ctx);
         int depth = X509_STORE_CTX_get_error_depth(ctx);
+        
+        ssl = (SSL *) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+        ssl_handle = (uv_ssl_ext_t *) SSL_get_ex_data(ssl, 0);
+        auto callback = ssl_handle->sslHandshakeCallback;
 
-        if(!preverify_ok){
-            return preverify_ok;
+        if(err == X509_V_OK){
+            return 1;
         }
 
-        X509_STORE_CTX_get_current_cert(ctx);        
-        err = X509_STORE_CTX_get_error(ctx);
-        depth = X509_STORE_CTX_get_error_depth(ctx);
-        if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT){
-            X509_STORE_CTX_set_error(ctx, err);
-            return 0;
-        }
         if(depth > OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH){
-            X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
-            return 0;
+            err = X509_V_ERR_CERT_CHAIN_TOO_LONG;
         }
 
-        return 1;
+        return handleHandshakeCallback(callback, ssl_handle, err);
     }
 
     static void releaseHook(UVTcpData *data){
@@ -112,17 +122,7 @@ namespace HPHP {
         return ret;
     }    
     
-    ALWAYS_INLINE bool handleHandshakeCallback(Variant &callback, uv_ssl_ext_t *ssl_handle, int err){
-        bool retval = false;
-        if(!callback.isNull()){
-            retval = vm_call_user_func(callback, make_packed_array(ssl_handle->tcp_object_data, err)).toBoolean();
-        }
-        if(!retval){
-            tcp_close_socket(ssl_handle);
-        }
-        
-        return retval;
-    }
+
 
     ALWAYS_INLINE bool handleHandshake(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf){
         int ret, err;
@@ -146,22 +146,23 @@ namespace HPHP {
                     write_bio_to_socket(ssl_handle);
                     return false;
                 default:
-                    if(!handleHandshakeCallback(sslHandshakeCallback, ssl_handle, SSL_get_verify_result(ssl_handle->sslResource.ssl))){
-                        return false;
-                    }
+                    tcp_close_socket(ssl_handle);
+                    return false;
             }
         }
 
-        err = X509_V_OK;
-        if(ssl_handle->clientMode){
-            peer_cert = SSL_get_peer_certificate(ssl_handle->sslResource.ssl);
-
-            if(!matches_common_name(peer_cert, ssl_handle->sniConnectHostname.c_str()) && !matches_san_list(peer_cert, ssl_handle->sniConnectHostname.c_str())){
-                err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+        if( ssl_handle->clientMode){
+            if((peer_cert = SSL_get_peer_certificate(ssl_handle->sslResource.ssl)) != NULL){
+                if(!matches_common_name(peer_cert, ssl_handle->sniConnectHostname.c_str()) && !matches_san_list(peer_cert, ssl_handle->sniConnectHostname.c_str())){
+                    if(!handleHandshakeCallback(sslHandshakeCallback, ssl_handle, X509_V_ERR_SUBJECT_ISSUER_MISMATCH)){
+                        X509_free(peer_cert);
+                        return false;                        
+                    }
+                }
             }
             X509_free(peer_cert);
         }
-        return handleHandshakeCallback(sslHandshakeCallback, ssl_handle, err);
+        return handleHandshakeCallback(sslHandshakeCallback, ssl_handle, X509_V_OK);
     }
     
     static void read_cb(uv_ssl_ext_t *ssl_handle, ssize_t nread, const uv_buf_t* buf) {
@@ -369,7 +370,6 @@ namespace HPHP {
         uv_ssl_ext_t *ssl_handle = (uv_ssl_ext_t *) req->handle;
         auto* data = Native::data<UVTcpData>(ssl_handle->tcp_object_data);
         auto callback = data->connectCallback;
-
         
         SSL_CTX_set_verify(ssl_handle->sslResource.ctx[0], SSL_VERIFY_PEER, verify_callback);
         SSL_CTX_set_default_verify_paths(ssl_handle->sslResource.ctx[0]);
@@ -378,10 +378,9 @@ namespace HPHP {
         uv_read_start((uv_stream_t *) ssl_handle, alloc_cb, (uv_read_cb) read_cb);
 
         ssl_handle->sslResource.ssl = SSL_new(ssl_handle->sslResource.ctx[0]);
+        SSL_set_ex_data(ssl_handle->sslResource.ssl, 0, ssl_handle);
         ssl_handle->sslResource.read_bio = BIO_new(BIO_s_mem());
         ssl_handle->sslResource.write_bio = BIO_new(BIO_s_mem());
-        
-
         SSL_set_bio(ssl_handle->sslResource.ssl, ssl_handle->sslResource.read_bio, ssl_handle->sslResource.write_bio);
 
 #ifndef OPENSSL_NO_TLSEXT
